@@ -28,13 +28,13 @@ python -m http.server 4173
 
 ## Widgy 北京预设
 
-推荐直接使用 1600×1600 的 Widgy 专用网页地址：
+推荐直接使用 Widgy 专用的自适应方形网页地址：
 
 ```text
 https://lzq1206.github.io/CosmosWhisper/widgy/beijing.html
 ```
 
-在 Widgy 的 Web URL、网页截图或 JavaScript 图层中使用这个地址。页面会强制使用北京坐标，并把 Canvas 固定为完整的 1600×1600 方形，避免截图只取顶部而丢失底部。
+在 Widgy 的 Web URL、网页截图或 JavaScript 图层中使用这个地址。页面会强制使用北京坐标，方形尺寸自动取视口短边，并从左上角开始绘制，避免固定 1600 页面只显示左上角。
 
 另外也保留 [`widgy/cosmoswhisper-beijing.widgy.json`](widgy/cosmoswhisper-beijing.widgy.json) 导入文件。Widgy 中选择 **Import Widget → Import JSON** 时，需要粘贴完整 JSON 内容，而不是只粘贴文件网址。
 
