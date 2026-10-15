@@ -20,6 +20,25 @@ const round = (value, digits = 4) => Number(value.toFixed(digits));
 const rightAscension = (longitude) => round((((longitude % 360) + 360) % 360) / 15);
 const point = ([longitude, latitude]) => [rightAscension(longitude), round(latitude)];
 const path = (points) => points.map(point);
+const continuousPath = (points) => {
+  const result = [];
+  let previous = null;
+  for (let index = 0; index < points.length; index += 1) {
+    const [longitude, latitude] = points[index];
+    if (index === points.length - 1 && longitude === points[0][0] && latitude === points[0][1]) {
+      result.push(result[0]);
+      continue;
+    }
+    let rightAscension = longitude / 15;
+    if (previous !== null) {
+      while (rightAscension - previous > 12) rightAscension -= 24;
+      while (rightAscension - previous < -12) rightAscension += 24;
+    }
+    result.push([round(rightAscension), round(latitude)]);
+    previous = rightAscension;
+  }
+  return result;
+};
 const json = (value) => JSON.stringify(value);
 
 async function loadJson(filename) {
@@ -28,13 +47,14 @@ async function loadJson(filename) {
   return response.json();
 }
 
-const [starsSource, boundsSource, linesSource, constellationsSource, namesSource, chineseNamesSource] = await Promise.all([
+const [starsSource, boundsSource, linesSource, constellationsSource, namesSource, chineseNamesSource, milkyWaySourceData] = await Promise.all([
   loadJson("stars.6.json"),
   loadJson("constellations.bounds.json"),
   loadJson("constellations.lines.json"),
   loadJson("constellations.json"),
   loadJson("starnames.json"),
   loadJson("starnames.cn.json"),
+  loadJson("mw.json"),
 ]);
 
 const stars = starsSource.features
@@ -91,10 +111,17 @@ const constellations = constellationIds.map((id) => ({
   labels: labels.get(id) ?? [],
 }));
 
+const milkyWayFeature = milkyWaySourceData.features.find((feature) => feature.id === "ol1");
+const milkyWayOuterRing = milkyWayFeature?.geometry?.coordinates?.[0]?.[0];
+if (!milkyWayOuterRing || milkyWayOuterRing.length < 3) throw new Error("The public Milky Way outline has no outer ring.");
+const milkyWay = continuousPath(milkyWayOuterRing);
+
 const starSource = `const star = (id, ra, dec, magnitude, bv, name, constellation) => ({ id, ra, dec, magnitude, bv, name, constellation, tone: bv !== null && bv < 0.2 ? "blue" : bv !== null && bv > 1.15 ? "warm" : "white" });\n\nexport const STARS = [\n${stars.map((entry) => `  star(${json(entry.id)}, ${entry.ra}, ${entry.dec}, ${entry.magnitude}, ${entry.bv}, ${json(entry.name)}, ${json(entry.constellation)}),`).join("\n")}\n];\n\nexport const STAR_BY_ID = new Map(STARS.map((entry) => [entry.id, entry]));\n`;
 const constellationSource = `const constellation = (id, name, abbr, lines, boundaryParts, labels) => ({ id, name, abbr, lines, boundaryParts, labels });\n\nexport const CONSTELLATIONS = ${JSON.stringify(constellations, null, 2)};\n\nexport const CONSTELLATION_BY_ID = new Map(CONSTELLATIONS.map((entry) => [entry.id, entry]));\nexport const CONSTELLATION_BY_NAME = new Map(CONSTELLATIONS.map((entry) => [entry.name, entry]));\n`;
+const milkyWayModule = `// Continuous outer envelope from d3-celestial mw.json (ol1), converted to J2000 RA hours / declination degrees.\nexport const MILKY_WAY_BAND = ${JSON.stringify(milkyWay)};\n`;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 await writeFile(new URL("stars.js", OUTPUT_DIR), starSource);
 await writeFile(new URL("constellations.js", OUTPUT_DIR), constellationSource);
-console.log(`Generated ${stars.length} stars and ${constellations.length} constellations.`);
+await writeFile(new URL("milkyWay.js", OUTPUT_DIR), milkyWayModule);
+console.log(`Generated ${stars.length} stars, ${constellations.length} constellations, and ${milkyWay.length} Milky Way envelope points.`);

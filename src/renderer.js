@@ -7,10 +7,9 @@ import {
   formatAltitude,
   formatAzimuth,
   formatHours,
-  mod,
 } from "./astro.js";
 import { CONSTELLATIONS } from "./data/constellations.js";
-import { MILKY_WAY_BANDS } from "./data/milkyWay.js";
+import { MILKY_WAY_BAND } from "./data/milkyWay.js";
 import { STARS } from "./data/stars.js";
 
 const COLORS = {
@@ -53,11 +52,6 @@ function starColor(tone) {
 
 function localClockFraction(date) {
   return (date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600) / 24;
-}
-
-function unitNoise(value) {
-  const raw = Math.sin(value) * 43758.5453;
-  return raw - Math.floor(raw);
 }
 
 export class SkyRenderer {
@@ -111,6 +105,18 @@ export class SkyRenderer {
     );
   }
 
+  projectEquatorialUnclipped(ra, dec, state) {
+    if (!this.metrics) return null;
+    const horizontal = equatorialToHorizontal(ra, dec, state.date, state.location.lat, state.location.lon);
+    const { baseRadius, centerX, centerY } = this.metrics;
+    const radius = baseRadius * state.zoom * (1 - clamp(horizontal.altitude, -90, 90) / 90);
+    const angle = horizontal.azimuth * DEG;
+    return {
+      x: centerX + radius * Math.sin(angle),
+      y: centerY - radius * Math.cos(angle),
+    };
+  }
+
   render(state) {
     this.resize();
     if (!this.metrics) return { visibleCount: 0 };
@@ -137,11 +143,11 @@ export class SkyRenderer {
     if (state.layers.boundaries) this.drawBoundaries(ctx, state);
     if (state.layers.constellations) this.drawConstellationLines(ctx, state);
     const visibleCount = state.layers.stars ? this.drawStars(ctx, state) : 0;
+    this.drawBodies(ctx, state);
     if (state.layers.labels) this.drawConstellationLabels(ctx, state);
     ctx.restore();
 
     this.drawHorizon(ctx, center, skyRadius, state);
-    this.drawTwilightRings(ctx, center, skyRadius, state);
     this.drawTimeRing(ctx, center, skyRadius, state);
     return { visibleCount };
   }
@@ -177,58 +183,11 @@ export class SkyRenderer {
   }
 
   drawMilkyWay(ctx, state) {
-    const densityThreshold = 0.72;
     ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    for (const band of [...MILKY_WAY_BANDS].sort((first, second) => first.width - second.width)) {
-      ctx.beginPath();
-      pathFromEquatorial(ctx, band.points, (ra, dec) => this.projectEquatorial(ra, dec, state));
-      ctx.strokeStyle = `rgba(255, 255, 255, ${0.035 + band.density * 0.045})`;
-      ctx.lineWidth = band.width * state.zoom;
-      ctx.stroke();
-
-      if (band.density >= densityThreshold) {
-        ctx.beginPath();
-        pathFromEquatorial(ctx, band.points, (ra, dec) => this.projectEquatorial(ra, dec, state));
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.07 + band.opacity * 0.16})`;
-        ctx.lineWidth = band.width * state.zoom * 0.55;
-        ctx.stroke();
-      }
-      this.drawMilkyWayStars(ctx, band, state, densityThreshold);
-    }
-    ctx.restore();
-  }
-
-  drawMilkyWayStars(ctx, band, state, densityThreshold) {
-    const samples = Math.round(70 + band.density * 95);
-    const points = band.points;
-    const opacity = band.density >= densityThreshold ? 0.56 : 0.28;
-    ctx.save();
-    ctx.fillStyle = "#ffffff";
-    for (let index = 0; index < samples; index += 1) {
-      const segmentIndex = index % (points.length - 1);
-      const segmentProgress = (index * 0.61803398875) % 1;
-      const [startRa, startDec] = points[segmentIndex];
-      const [endRa, endDec] = points[segmentIndex + 1];
-      let adjustedEndRa = endRa;
-      if (Math.abs(adjustedEndRa - startRa) > 12) {
-        adjustedEndRa += adjustedEndRa < startRa ? 24 : -24;
-      }
-      const randomA = unitNoise(index * 12.9898 + band.width * 4.17);
-      const randomB = unitNoise(index * 78.233 + band.density * 19.11);
-      const randomC = unitNoise(index * 39.425 + band.opacity * 27.8);
-      const baseRa = mod(startRa + (adjustedEndRa - startRa) * segmentProgress, 24);
-      const baseDec = startDec + (endDec - startDec) * segmentProgress;
-      const jitterDec = (randomA - 0.5) * (4.5 + band.width * 0.34);
-      const jitterRa = (randomB - 0.5) * (0.35 + band.width * 0.05);
-      const point = this.projectEquatorial(baseRa + jitterRa, baseDec + jitterDec, state);
-      if (!point) continue;
-      ctx.globalAlpha = opacity * (0.58 + randomC * 0.42);
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, 0.35 + (index % 4) * 0.18, 0, TAU);
-      ctx.fill();
-    }
+    ctx.beginPath();
+    pathFromEquatorial(ctx, MILKY_WAY_BAND, (ra, dec) => this.projectEquatorialUnclipped(ra, dec, state));
+    ctx.fillStyle = "rgba(255, 255, 255, 0.11)";
+    ctx.fill();
     ctx.restore();
   }
 
@@ -381,6 +340,42 @@ export class SkyRenderer {
     return visibleCount;
   }
 
+  drawBodies(ctx, state) {
+    for (const body of state.bodies ?? []) {
+      const point = this.projectHorizontal(body.horizontal, state);
+      if (!point) continue;
+      const radius = body.size * Math.sqrt(state.zoom);
+      ctx.save();
+      ctx.fillStyle = body.color;
+      ctx.globalAlpha = body.id === "sun" ? 0.95 : 0.9;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, TAU);
+      ctx.fill();
+      if (body.id === "saturn") {
+        ctx.strokeStyle = "rgba(236, 214, 166, 0.8)";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.ellipse(point.x, point.y, radius * 1.9, radius * 0.65, -0.25, 0, TAU);
+        ctx.stroke();
+      }
+      if (body.id === "moon" && body.illumination < 0.95) {
+        ctx.fillStyle = "rgba(7, 16, 38, 0.7)";
+        ctx.beginPath();
+        ctx.arc(point.x + radius * (1 - body.illumination * 2), point.y, radius * 0.92, 0, TAU);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      if (state.layers.labels) {
+        ctx.fillStyle = body.color;
+        ctx.font = "9px Segoe UI, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(body.name, point.x + radius + 4, point.y - radius - 2);
+      }
+      ctx.restore();
+    }
+  }
+
   drawConstellationLabels(ctx, state) {
     ctx.save();
     ctx.textAlign = "center";
@@ -425,89 +420,66 @@ export class SkyRenderer {
 
   ringLayout(skyRadius) {
     return {
-      twilight: [skyRadius + 7, skyRadius + 13, skyRadius + 19, skyRadius + 25],
       time: skyRadius + 38,
       timeOuter: skyRadius + 46,
     };
   }
 
-  drawTwilightRings(ctx, center, skyRadius, state) {
-    const layout = this.ringLayout(skyRadius);
-    const styles = {
-      astronomical: { color: "#d59af4", label: "天文", fraction: 0.8 },
-      nautical: { color: "#79aeea", label: "航海", fraction: 0.73 },
-      civil: { color: "#f2c36c", label: "民用", fraction: 0.66 },
-      standard: { color: "#f6e2b4", label: "标准", fraction: 0.59 },
-    };
-    const ordered = ["astronomical", "nautical", "civil", "standard"];
-    ctx.save();
-    ctx.lineCap = "butt";
-    for (let index = 0; index < ordered.length; index += 1) {
-      const id = ordered[index];
-      const radius = layout.twilight[index];
-      const style = styles[id];
-      ctx.strokeStyle = "rgba(195, 209, 236, 0.23)";
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.arc(center.x, center.y, radius, 0, TAU);
-      ctx.stroke();
-      const band = state.twilight?.bands.find((entry) => entry.id === id);
-      if (band) {
-        ctx.strokeStyle = style.color;
-        ctx.globalAlpha = 0.72;
-        for (const interval of band.intervals) {
-          if (interval.end - interval.start < 0.00001) continue;
-          const startAngle = -Math.PI / 2 + interval.start * TAU;
-          const endAngle = -Math.PI / 2 + interval.end * TAU;
-          ctx.beginPath();
-          ctx.arc(center.x, center.y, radius, startAngle, endAngle);
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-      }
-      const events = state.twilight?.events.find((entry) => entry.id === id)?.fractions ?? [];
-      ctx.strokeStyle = style.color;
-      ctx.lineWidth = 1.2;
-      for (const fraction of events) {
-        const angle = -Math.PI / 2 + fraction * TAU;
-        const inner = radius - 4;
-        const outer = radius + 4;
-        ctx.beginPath();
-        ctx.moveTo(center.x + Math.cos(angle) * inner, center.y + Math.sin(angle) * inner);
-        ctx.lineTo(center.x + Math.cos(angle) * outer, center.y + Math.sin(angle) * outer);
-        ctx.stroke();
-      }
-      ctx.fillStyle = style.color;
-      ctx.font = "8px Segoe UI, sans-serif";
-      const labelAngle = -Math.PI / 2 + style.fraction * TAU;
-      const labelX = center.x + Math.cos(labelAngle) * (radius + 4);
-      const labelY = center.y + Math.sin(labelAngle) * (radius + 4);
-      ctx.textAlign = labelX < center.x ? "right" : "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText(style.label, labelX, labelY);
-    }
-    ctx.restore();
-  }
-
   drawTimeRing(ctx, center, skyRadius, state) {
     const { time, timeOuter } = this.ringLayout(skyRadius);
+    const colors = {
+      day: "#f4f1df",
+      standard: "#f6e2b4",
+      civil: "#f2c36c",
+      nautical: "#79aeea",
+      astronomical: "#d59af4",
+      moon: "#9bcdf7",
+      night: "#1b335e",
+    };
+    const labels = {
+      day: "白昼",
+      standard: "标准",
+      civil: "民用",
+      nautical: "航海",
+      astronomical: "天文",
+      moon: "月照",
+      night: "无月",
+    };
     ctx.save();
-    ctx.strokeStyle = "rgba(195, 209, 236, 0.5)";
-    ctx.lineWidth = 1;
+    ctx.lineCap = "butt";
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = colors.night;
     ctx.beginPath();
     ctx.arc(center.x, center.y, time, 0, TAU);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(242, 195, 108, 0.42)";
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, timeOuter, 0, TAU);
-    ctx.stroke();
+    for (const segment of state.timeRing?.segments ?? []) {
+      if (segment.end - segment.start < 0.00001) continue;
+      const startAngle = -Math.PI / 2 + segment.start * TAU;
+      const endAngle = -Math.PI / 2 + segment.end * TAU;
+      ctx.strokeStyle = colors[segment.id] ?? colors.night;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, time, startAngle, endAngle);
+      ctx.stroke();
+      if (segment.end - segment.start > 0.035) {
+        const middle = (segment.start + segment.end) / 2;
+        const labelAngle = -Math.PI / 2 + middle * TAU;
+        const labelRadius = timeOuter + 7;
+        const labelX = center.x + Math.cos(labelAngle) * labelRadius;
+        const labelY = center.y + Math.sin(labelAngle) * labelRadius;
+        ctx.fillStyle = colors[segment.id] ?? colors.night;
+        ctx.font = "8px Segoe UI, sans-serif";
+        ctx.textAlign = labelX < center.x ? "right" : "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(labels[segment.id] ?? segment.id, labelX, labelY);
+      }
+    }
 
     for (let index = 0; index < 96; index += 1) {
       const fraction = index / 96;
       const angle = -Math.PI / 2 + fraction * TAU;
       const length = index % 4 === 0 ? 8 : index % 2 === 0 ? 5 : 3;
       const inner = timeOuter - length;
-      ctx.strokeStyle = index % 4 === 0 ? "rgba(240, 238, 229, 0.72)" : "rgba(137, 147, 171, 0.55)";
+      ctx.strokeStyle = index % 4 === 0 ? "rgba(240, 238, 229, 0.78)" : "rgba(137, 147, 171, 0.6)";
       ctx.lineWidth = index % 4 === 0 ? 1 : 0.7;
       ctx.beginPath();
       ctx.moveTo(center.x + Math.cos(angle) * inner, center.y + Math.sin(angle) * inner);
@@ -515,7 +487,7 @@ export class SkyRenderer {
       ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(216, 196, 142, 0.82)";
+    ctx.fillStyle = "rgba(216, 196, 142, 0.86)";
     ctx.font = "9px Segoe UI, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -525,20 +497,14 @@ export class SkyRenderer {
       ctx.fillText(label, center.x + Math.cos(angle) * distance, center.y + Math.sin(angle) * distance);
     }
 
-    const fraction = state.twilight?.timeFraction ?? localClockFraction(state.date);
+    const fraction = state.timeRing?.timeFraction ?? localClockFraction(state.date);
     const markerAngle = -Math.PI / 2 + fraction * TAU;
-    const markerInner = time - 5;
-    const markerOuter = timeOuter + 5;
     ctx.strokeStyle = COLORS.gold;
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(center.x + Math.cos(markerAngle) * markerInner, center.y + Math.sin(markerAngle) * markerInner);
-    ctx.lineTo(center.x + Math.cos(markerAngle) * markerOuter, center.y + Math.sin(markerAngle) * markerOuter);
+    ctx.moveTo(center.x + Math.cos(markerAngle) * (time - 6), center.y + Math.sin(markerAngle) * (time - 6));
+    ctx.lineTo(center.x + Math.cos(markerAngle) * (timeOuter + 7), center.y + Math.sin(markerAngle) * (timeOuter + 7));
     ctx.stroke();
-    ctx.fillStyle = COLORS.gold;
-    ctx.beginPath();
-    ctx.arc(center.x + Math.cos(markerAngle) * markerOuter, center.y + Math.sin(markerAngle) * markerOuter, 2.7, 0, TAU);
-    ctx.fill();
     ctx.restore();
   }
 
