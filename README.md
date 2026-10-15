@@ -26,6 +26,18 @@ python -m http.server 4173
 
 星图不支持直接拖动旋转：天体位置由观测时间与地点重新计算，避免人为转动表盘导致方向错误。太阳系天体为界面级低精度位置，地球只作为观测参考，不在天空中绘制。标准数据来源与转换说明见 [`src/data/SOURCES.md`](src/data/SOURCES.md)。
 
+## Widgy 北京预设
+
+已生成 [`widgy/cosmoswhisper-beijing.widgy.json`](widgy/cosmoswhisper-beijing.widgy.json)，基于公开 Widgy JSON 导出样本制作。Widgy 中选择 **Import Widget → Import JSON**，导入这个文件即可。
+
+该版本是北京坐标（北纬 39.9042°、东经 116.4074°、UTC+8）的静态星图快照，背景 SVG 托管在 GitHub Pages。需要刷新日期时，在仓库根目录运行：
+
+```bash
+node scripts/generate-beijing-widgy.mjs
+```
+
+Widgy 不会执行本项目的 JavaScript 天文计算，因此该预设不是秒级实时小组件；完整实时星图仍使用网页版本。
+
 ## GitHub Pages
 
 `.github/workflows/pages.yml` 会在 `main` 分支推送后使用 GitHub Pages Actions 发布根目录静态文件。首次使用时，在仓库 Settings → Pages → Build and deployment 中选择 **GitHub Actions**。

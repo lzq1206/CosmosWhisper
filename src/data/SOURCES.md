@@ -26,6 +26,11 @@ CosmosWhisper 将公开星图数据在构建阶段转换为静态 ES modules；G
 - 行星轨道采用 Paul Schlyter 的低精度公开计算方法（[Planetary positions](https://stjarnhimlen.se/comp/ppcomp.html)）和其公开的轨道根数形式；太阳/月亮位置用于界面级方位、月相和夜间照明判断，不用于望远镜指向。
 - 地球只作为地心观测参考，不绘制为天空中的行星；画面绘制太阳、月亮和水星至海王星的地平坐标。行星位置会随日期/地点更新，近地月球模型未加入完整视差、章动和摄动修正。
 
+## Widgy 北京预设
+
+- JSON 结构参考公开的 [`opal-weather-widgy.json`](https://github.com/jedavid33-design/opal-weather/blob/main/opal-weather-widgy.json) 示例；本项目只保留其 Widgy Web URL 图层结构并替换为北京星图 SVG。
+- 生成文件是静态快照，不能在 Widgy 内执行 CosmosWhisper 的 JavaScript 天文算法；坐标和快照日期写入 SVG，重新运行生成脚本即可更新。
+
 ## 限制
 
 这些数据用于教育、界面可视化和裸眼观测方向提示，不是天文导航或精密望远镜指向数据。当前计算未加入光行差、章动和大气折射修正；恒星时、岁差和地平坐标仍按离线近似实现。
