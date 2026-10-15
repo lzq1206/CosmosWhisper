@@ -140,7 +140,7 @@ widgy["5"] = "CosmosWhisper";
 widgy["4"] = "北京本地天空星图 · 静态快照";
 const webLayer = (widgy["1"] ?? []).find((layer) => layer["1"] === "Web URL");
 if (!webLayer) throw new Error("The Widgy template has no Web URL layer.");
-webLayer["2"] = "https://lzq1206.github.io/CosmosWhisper/widgy/beijing-sky.svg";
+webLayer["2"] = "https://lzq1206.github.io/CosmosWhisper/widgy/beijing-sky.png";
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 await writeFile(new URL("beijing-sky.svg", OUTPUT_DIR), svg);
