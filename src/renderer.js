@@ -44,6 +44,52 @@ function pathFromEquatorial(ctx, points, project) {
   }
 }
 
+function ringDistance(first, second) {
+  const deltaRa = Math.abs(first[0] - second[0]);
+  const wrappedRa = Math.abs(((deltaRa + 12) % 24) - 12);
+  return wrappedRa * wrappedRa + (first[1] - second[1]) ** 2;
+}
+
+function resampleRing(points, count) {
+  const source = points.slice(0, -1);
+  const lengths = [0];
+  for (let index = 0; index < source.length; index += 1) {
+    const first = source[index];
+    const second = source[(index + 1) % source.length];
+    lengths.push(lengths[index] + Math.hypot(second[0] - first[0], second[1] - first[1]));
+  }
+  const total = lengths.at(-1);
+  const result = [];
+  let segment = 0;
+  for (let index = 0; index < count; index += 1) {
+    const target = total * index / count;
+    while (segment < source.length - 1 && lengths[segment + 1] < target) segment += 1;
+    const first = source[segment];
+    const second = source[(segment + 1) % source.length];
+    const span = lengths[segment + 1] - lengths[segment] || 1;
+    const amount = (target - lengths[segment]) / span;
+    result.push([first[0] + (second[0] - first[0]) * amount, first[1] + (second[1] - first[1]) * amount]);
+  }
+  return result;
+}
+
+function alignRings(first, second) {
+  let bestShift = 0;
+  let bestDistance = Infinity;
+  for (let shift = 0; shift < second.length; shift += 1) {
+    const distance = ringDistance(first[0], second[shift]);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestShift = shift;
+    }
+  }
+  const aligned = first.map((_, index) => second[(index + bestShift) % second.length]);
+  const forward = ringDistance(first[1], aligned[1]);
+  const reversed = ringDistance(first[1], aligned[aligned.length - 1]);
+  if (reversed < forward) aligned.reverse();
+  return aligned;
+}
+
 function starColor(tone) {
   if (tone === "warm") return COLORS.starWarm;
   if (tone === "blue") return COLORS.starBlue;
@@ -185,13 +231,30 @@ export class SkyRenderer {
   }
 
   drawMilkyWay(ctx, state) {
+    const sampleCount = 720;
+    const outer = resampleRing(MILKY_WAY_RINGS[0], sampleCount);
+    const inner = alignRings(outer, resampleRing(MILKY_WAY_RINGS[1], sampleCount));
+    const skyRadius = this.metrics.baseRadius * state.zoom;
     ctx.save();
-    ctx.beginPath();
-    for (const ring of MILKY_WAY_RINGS) {
-      pathFromEquatorial(ctx, ring, (ra, dec) => this.projectEquatorialUnclipped(ra, dec, state));
-    }
     ctx.fillStyle = "rgba(255, 255, 255, 0.11)";
-    ctx.fill("evenodd");
+    for (let index = 0; index < sampleCount; index += 1) {
+      const next = (index + 1) % sampleCount;
+      const first = this.projectEquatorialUnclipped(outer[index][0], outer[index][1], state);
+      const second = this.projectEquatorialUnclipped(outer[next][0], outer[next][1], state);
+      const third = this.projectEquatorialUnclipped(inner[next][0], inner[next][1], state);
+      const fourth = this.projectEquatorialUnclipped(inner[index][0], inner[index][1], state);
+      if (!first || !second || !third || !fourth) continue;
+      const edgeLimit = skyRadius * 0.9;
+      if (Math.hypot(second.x - first.x, second.y - first.y) > edgeLimit) continue;
+      if (Math.hypot(third.x - fourth.x, third.y - fourth.y) > edgeLimit) continue;
+      ctx.beginPath();
+      ctx.moveTo(first.x, first.y);
+      ctx.lineTo(second.x, second.y);
+      ctx.lineTo(third.x, third.y);
+      ctx.lineTo(fourth.x, fourth.y);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -438,12 +501,12 @@ export class SkyRenderer {
       night: "#1b335e",
     };
     const labels = {
-      day: "白昼",
+      day: "",
       standard: "标准",
       civil: "民用",
       nautical: "航海",
       astronomical: "天文",
-      moon: "月照",
+      moon: "",
       night: "无月",
     };
     ctx.save();
@@ -461,7 +524,8 @@ export class SkyRenderer {
       ctx.beginPath();
       ctx.arc(center.x, center.y, time, startAngle, endAngle);
       ctx.stroke();
-      if (segment.end - segment.start > 0.035) {
+      const label = labels[segment.id];
+      if (label && segment.end - segment.start > 0.035) {
         const middle = (segment.start + segment.end) / 2;
         const labelAngle = -Math.PI / 2 + middle * TAU;
         const labelRadius = timeOuter + (state.widgetMode ? 1 : 7);
@@ -471,7 +535,7 @@ export class SkyRenderer {
         ctx.font = "8px Segoe UI, sans-serif";
         ctx.textAlign = labelX < center.x ? "right" : "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(labels[segment.id] ?? segment.id, labelX, labelY);
+        ctx.fillText(label, labelX, labelY);
       }
     }
 

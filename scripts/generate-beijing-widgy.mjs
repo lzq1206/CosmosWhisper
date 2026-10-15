@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import sharp from "sharp";
 import { CONSTELLATIONS } from "../src/data/constellations.js";
 import { MILKY_WAY_RINGS } from "../src/data/milkyWay.js";
 import { planetaryBodies, equatorialToHorizontal, solarAltitude, clamp, DEG, TAU } from "../src/astro.js";
@@ -34,6 +35,18 @@ function project(horizontal, unclipped = false) {
 
 function projectEquatorial(ra, dec, unclipped = false) {
   return project(equatorialToHorizontal(ra, dec, DATE, LOCATION.lat, LOCATION.lon), unclipped);
+}
+
+function beijingClockFraction(date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  return (hour + minute / 60) / 24;
 }
 
 function pathData(points, projectPoint, close = false) {
@@ -104,14 +117,14 @@ const ticks = Array.from({ length: 96 }, (_, index) => {
   const y2 = CENTER + Math.sin(angle) * TIME_OUTER;
   return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" class="time-tick"/>`;
 }).join("");
-const localTimeFraction = (DATE.getHours() + DATE.getMinutes() / 60) / 24;
+const localTimeFraction = beijingClockFraction(DATE);
 const pointerAngle = -Math.PI / 2 + localTimeFraction * TAU;
 const pointer = `<line x1="${(CENTER + Math.cos(pointerAngle) * (TIME_RADIUS - 7)).toFixed(1)}" y1="${(CENTER + Math.sin(pointerAngle) * (TIME_RADIUS - 7)).toFixed(1)}" x2="${(CENTER + Math.cos(pointerAngle) * (TIME_OUTER + 10)).toFixed(1)}" y2="${(CENTER + Math.sin(pointerAngle) * (TIME_OUTER + 10)).toFixed(1)}" class="time-pointer"/>`;
 
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
   <style>
-    .star-label{font:18px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#f0eee5;opacity:.8}.body-label{font:20px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#f6d890}.body-dot{stroke:#06102a;stroke-width:3}.constellation-line{fill:none;stroke:#78c7d4;stroke-width:1.6;stroke-dasharray:5 7;opacity:.62}.boundary-line{fill:none;stroke:#d89b9e;stroke-width:1;stroke-dasharray:4 8;opacity:.32}.time-tick{stroke:#d9dfee;stroke-width:2;opacity:.7}.time-pointer{stroke:#f2c36c;stroke-width:5}.sky-label{font:24px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#f0eee5;letter-spacing:3px}.meta-label{font:16px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#9da9c2;letter-spacing:2px}
+    .star-label{font:18px "Noto Sans CJK SC","Noto Sans CJK TC",-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#f0eee5;opacity:.8}.body-label{font:20px "Noto Sans CJK SC","Noto Sans CJK TC",-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#f6d890}.body-dot{stroke:#06102a;stroke-width:3}.constellation-line{fill:none;stroke:#78c7d4;stroke-width:1.6;stroke-dasharray:5 7;opacity:.62}.boundary-line{fill:none;stroke:#d89b9e;stroke-width:1;stroke-dasharray:4 8;opacity:.32}.time-tick{stroke:#d9dfee;stroke-width:2;opacity:.7}.time-pointer{stroke:#f2c36c;stroke-width:5}.sky-label{font:24px "Noto Sans CJK SC","Noto Sans CJK TC",-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#f0eee5;letter-spacing:3px}.meta-label{font:16px "Noto Sans CJK SC","Noto Sans CJK TC",-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;fill:#9da9c2;letter-spacing:2px}
   </style>
   <rect width="${SIZE}" height="${SIZE}" fill="#030817"/>
   <circle cx="${CENTER}" cy="${CENTER}" r="${SKY_RADIUS}" fill="#07142e"/>
@@ -134,7 +147,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 const widgyOutput = new URL("../widgy/cosmoswhisper-beijing.widgy.json", import.meta.url);
-const widgy = JSON.parse(await (await import("node:fs/promises")).readFile(widgyOutput, "utf8"));
+const widgy = JSON.parse(await readFile(widgyOutput, "utf8"));
 widgy["3"] = "CosmosWhisper · 北京";
 widgy["5"] = "CosmosWhisper";
 widgy["4"] = "北京本地天空星图 · 静态快照";
@@ -142,7 +155,37 @@ const webLayer = (widgy["1"] ?? []).find((layer) => layer["1"] === "Web URL");
 if (!webLayer) throw new Error("The Widgy template has no Web URL layer.");
 webLayer["2"] = "https://lzq1206.github.io/CosmosWhisper/widgy/beijing-sky.png";
 
+const generatedAt = new Date().toISOString();
+const imageUrl = `https://lzq1206.github.io/CosmosWhisper/widgy/beijing-sky.png?v=${encodeURIComponent(generatedAt)}`;
+const imageBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>CosmosWhisper · 北京星图</title>
+    <link>https://lzq1206.github.io/CosmosWhisper/widgy/beijing.html</link>
+    <description>北京本地天空星图 PNG 快照</description>
+    <lastBuildDate>${new Date(generatedAt).toUTCString()}</lastBuildDate>
+    <ttl>15</ttl>
+    <image>
+      <url>${imageUrl}</url>
+      <title>CosmosWhisper · 北京</title>
+      <link>https://lzq1206.github.io/CosmosWhisper/widgy/beijing.html</link>
+    </image>
+    <item>
+      <title>北京天空 · ${escapeXml(fixedSkyTime())}</title>
+      <guid isPermaLink="false">cosmoswhisper-beijing-${generatedAt}</guid>
+      <pubDate>${new Date(generatedAt).toUTCString()}</pubDate>
+      <description><![CDATA[北京星图，生成时间：${escapeXml(fixedSkyTime())}（UTC+8）]]></description>
+      <enclosure url="${imageUrl}" type="image/png" length="${imageBuffer.length}"/>
+      <media:content url="${imageUrl}" medium="image" type="image/png" width="1600" height="1600"/>
+    </item>
+  </channel>
+</rss>
+`;
+
 await mkdir(OUTPUT_DIR, { recursive: true });
 await writeFile(new URL("beijing-sky.svg", OUTPUT_DIR), svg);
+await writeFile(new URL("beijing-sky.png", OUTPUT_DIR), imageBuffer);
+await writeFile(new URL("beijing.xml", OUTPUT_DIR), rss);
 await writeFile(widgyOutput, `${JSON.stringify(widgy, null, 2)}\n`);
-console.log(`Generated Beijing Widgy snapshot for ${DATE.toISOString()}.`);
+console.log(`Generated Beijing Widgy PNG/RSS snapshot for ${DATE.toISOString()}.`);

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#030817" />
+    <title>CosmosWhisper · 城市索引</title>
+    <style>
+      :root{color-scheme:dark;--bg:#030817;--panel:#0a1530;--line:#263a62;--ink:#f0eee5;--muted:#94a2bd;--gold:#f2c36c;--cyan:#79c8d2}
+      *{box-sizing:border-box}
+      html,body{margin:0;min-width:320px;min-height:100%;background:radial-gradient(circle at 80% 0%,#11244a 0,#030817 32rem);color:var(--ink);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+      body{padding:28px 18px 44px}
+      .shell{width:min(1080px,100%);margin:0 auto}
+      header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:10px 0 30px;border-bottom:1px solid var(--line)}
+      .mark{display:flex;align-items:center;gap:12px}.mark-dot{width:30px;height:30px;display:grid;place-items:center;border:1px solid #c9a769;border-radius:50%;color:var(--gold);font-family:Georgia,serif}.eyebrow{margin:0 0 8px;color:#667896;font-size:10px;font-weight:700;letter-spacing:.2em}.title{margin:0;font:400 clamp(28px,5vw,48px)/1.05 Georgia,"Songti SC",serif;letter-spacing:-.04em}.intro{max-width:300px;margin:0;color:var(--muted);font-size:12px;line-height:1.7;text-align:right}
+      .section{padding-top:28px}.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}.section h2{margin:0;font:400 21px Georgia,"Songti SC",serif}.count{color:var(--faint,#64738f);font-size:10px;letter-spacing:.12em}
+      .city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px}
+      .city{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:9px 11px;border:1px solid rgba(132,154,194,.2);border-radius:7px;background:rgba(10,21,48,.82);color:var(--ink);text-decoration:none;transition:border-color .15s,background .15s,transform .15s}.city:hover{border-color:var(--cyan);background:rgba(121,200,210,.1);transform:translateY(-1px)}.city small{color:#63728f;font-size:9px;font-variant-numeric:tabular-nums}.city strong{font-size:12px;font-weight:500}
+      footer{padding-top:32px;color:#63728f;font-size:10px}
+      @media (max-width:600px){body{padding:18px 12px 32px}header{display:block;padding-bottom:22px}.intro{max-width:none;margin-top:12px;text-align:left}.city-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div class="mark"><span class="mark-dot">✦</span><div><p class="eyebrow">COSMOSWHISPER / CITY ATLAS</p><h1 class="title">选择你的地平线</h1></div></div>
+        <p class="intro">选择城市后进入同一套方形星盘。时间、晨昏、月照和行星位置会按该城市重新计算。</p>
+      </header>
+      <div id="city-list"></div>
+      <footer>所有位置为城市中心近似坐标；点击城市可打开 Widgy 兼容的方形网页星盘。</footer>
+    </main>
+    <script type="module">
+      import { CITIES } from "../src/data/cities.js";
+      const list = document.querySelector("#city-list");
+      const groups = new Map();
+      for (const city of CITIES) {
+        if (!groups.has(city.group)) groups.set(city.group, []);
+        groups.get(city.group).push(city);
+      }
+      for (const [group, cities] of groups) {
+        const section = document.createElement("section");
+        section.className = "section";
+        section.innerHTML = `<div class="section-head"><h2>${group}</h2><span class="count">${cities.length} CITIES</span></div>`;
+        const grid = document.createElement("div");
+        grid.className = "city-grid";
+        for (const city of cities) {
+          const link = document.createElement("a");
+          link.className = "city";
+          link.href = `./city.html?city=${encodeURIComponent(city.id)}`;
+          link.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small>`;
+          grid.append(link);
+        }
+        section.append(grid);
+        list.append(section);
+      }
+    </script>
+  </body>
+</html>

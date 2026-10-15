@@ -26,6 +26,16 @@ python -m http.server 4173
 
 星图不支持直接拖动旋转：天体位置由观测时间与地点重新计算，避免人为转动表盘导致方向错误。太阳系天体为界面级低精度位置，地球只作为观测参考，不在天空中绘制。标准数据来源与转换说明见 [`src/data/SOURCES.md`](src/data/SOURCES.md)。
 
+## Widgy 城市索引
+
+全国省会、直辖市、港澳台和主要城市索引：
+
+```text
+https://lzq1206.github.io/CosmosWhisper/widgy/
+```
+
+城市链接会打开同一套自适应方形星盘，并按 URL 城市参数切换坐标。
+
 ## Widgy 北京预设
 
 推荐直接使用 Widgy 专用的自适应方形网页地址：
@@ -37,6 +47,20 @@ https://lzq1206.github.io/CosmosWhisper/widgy/beijing.html
 在 Widgy 的 Web URL、网页截图或 JavaScript 图层中使用这个地址。页面会强制使用北京坐标，方形尺寸自动取视口短边，并从左上角开始绘制，避免固定 1600 页面只显示左上角。
 
 另外也保留 [`widgy/cosmoswhisper-beijing.widgy.json`](widgy/cosmoswhisper-beijing.widgy.json) 导入文件。Widgy 中选择 **Import Widget → Import JSON** 时，需要粘贴完整 JSON 内容，而不是只粘贴文件网址。
+
+RSS 图片接入地址：
+
+```text
+https://lzq1206.github.io/CosmosWhisper/widgy/beijing.xml
+```
+
+固定 PNG 地址：
+
+```text
+https://lzq1206.github.io/CosmosWhisper/widgy/beijing-sky.png
+```
+
+GitHub Actions 每 30 分钟生成一次北京 PNG/RSS；实际刷新还会受 Actions 排队、Pages/CDN 缓存和 Widgy/iOS 调度影响，不保证精确到点。
 
 ## GitHub Pages
 

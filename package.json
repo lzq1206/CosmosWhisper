@@ -1,0 +1,11 @@
+{
+  "name": "cosmoswhisper",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:beijing-widgy": "node scripts/generate-beijing-widgy.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.33.5"
+  }
+}

@@ -39,7 +39,7 @@ const state = {
     labels: true,
   },
   zoom: 1,
-  widgetMode: document.body.dataset.widget === "true",
+  widgetMode: true,
   hoverStarId: null,
   selectedStarId: null,
 };

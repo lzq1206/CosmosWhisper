@@ -31,6 +31,11 @@ CosmosWhisper 将公开星图数据在构建阶段转换为静态 ES modules；G
 - JSON 结构参考公开的 [`opal-weather-widgy.json`](https://github.com/jedavid33-design/opal-weather/blob/main/opal-weather-widgy.json) 示例；本项目只保留其 Widgy Web URL 图层结构并替换为北京星图 SVG。
 - 生成文件是静态快照，不能在 Widgy 内执行 CosmosWhisper 的 JavaScript 天文算法；坐标和快照日期写入 SVG，重新运行生成脚本即可更新。
 
+## RSS 图片
+
+- `scripts/generate-beijing-widgy.mjs` 使用 `sharp` 将北京 SVG 快照转为 PNG，并生成 RSS 2.0 的 `enclosure` 与 `media:content` 图片条目。
+- `.github/workflows/pages.yml` 每 30 分钟在 Pages 构建前生成一次；RSS 和 PNG 是静态发布产物，刷新会受到 GitHub Actions、Pages/CDN 和 Widgy/iOS 调度延迟影响。
+
 ## 限制
 
 这些数据用于教育、界面可视化和裸眼观测方向提示，不是天文导航或精密望远镜指向数据。当前计算未加入光行差、章动和大气折射修正；恒星时、岁差和地平坐标仍按离线近似实现。
