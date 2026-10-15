@@ -7,7 +7,6 @@ import {
   formatAltitude,
   formatAzimuth,
   formatHours,
-  localSiderealHours,
   mod,
 } from "./astro.js";
 import { CONSTELLATIONS } from "./data/constellations.js";
@@ -87,7 +86,7 @@ export class SkyRenderer {
       height: rect.height,
       centerX: rect.width / 2,
       centerY: rect.height / 2,
-      baseRadius: Math.min(rect.width, rect.height) * 0.395,
+      baseRadius: Math.min(rect.width, rect.height) * 0.34,
     };
   }
 
@@ -142,8 +141,8 @@ export class SkyRenderer {
     ctx.restore();
 
     this.drawHorizon(ctx, center, skyRadius, state);
-    this.drawClockTicks(ctx, center, skyRadius, state);
-    this.drawHands(ctx, center, skyRadius, state);
+    this.drawTwilightRings(ctx, center, skyRadius, state);
+    this.drawTimeRing(ctx, center, skyRadius, state);
     return { visibleCount };
   }
 
@@ -424,70 +423,121 @@ export class SkyRenderer {
     ctx.restore();
   }
 
-  drawClockTicks(ctx, center, skyRadius) {
+  ringLayout(skyRadius) {
+    return {
+      twilight: [skyRadius + 7, skyRadius + 13, skyRadius + 19, skyRadius + 25],
+      time: skyRadius + 38,
+      timeOuter: skyRadius + 46,
+    };
+  }
+
+  drawTwilightRings(ctx, center, skyRadius, state) {
+    const layout = this.ringLayout(skyRadius);
+    const styles = {
+      astronomical: { color: "#d59af4", label: "天文", fraction: 0.8 },
+      nautical: { color: "#79aeea", label: "航海", fraction: 0.73 },
+      civil: { color: "#f2c36c", label: "民用", fraction: 0.66 },
+      standard: { color: "#f6e2b4", label: "标准", fraction: 0.59 },
+    };
+    const ordered = ["astronomical", "nautical", "civil", "standard"];
     ctx.save();
-    ctx.strokeStyle = "rgba(195, 209, 236, 0.38)";
-    ctx.lineWidth = 1;
-    for (let index = 0; index < 72; index += 1) {
-      const angle = index / 72 * TAU;
-      const length = index % 6 === 0 ? 8 : index % 3 === 0 ? 5 : 3;
-      const outer = skyRadius + 3;
-      const inner = outer - length;
+    ctx.lineCap = "butt";
+    for (let index = 0; index < ordered.length; index += 1) {
+      const id = ordered[index];
+      const radius = layout.twilight[index];
+      const style = styles[id];
+      ctx.strokeStyle = "rgba(195, 209, 236, 0.23)";
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.moveTo(center.x + Math.sin(angle) * inner, center.y - Math.cos(angle) * inner);
-      ctx.lineTo(center.x + Math.sin(angle) * outer, center.y - Math.cos(angle) * outer);
+      ctx.arc(center.x, center.y, radius, 0, TAU);
       ctx.stroke();
-    }
-    ctx.fillStyle = "rgba(137, 147, 171, 0.72)";
-    ctx.font = "9px Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    for (const [label, fraction] of [["0h", 0], ["6h", 0.25], ["12h", 0.5], ["18h", 0.75]]) {
-      const angle = fraction * TAU;
-      const distance = skyRadius + 31;
-      ctx.fillText(label, center.x + Math.sin(angle) * distance, center.y - Math.cos(angle) * distance);
+      const band = state.twilight?.bands.find((entry) => entry.id === id);
+      if (band) {
+        ctx.strokeStyle = style.color;
+        ctx.globalAlpha = 0.72;
+        for (const interval of band.intervals) {
+          if (interval.end - interval.start < 0.00001) continue;
+          const startAngle = -Math.PI / 2 + interval.start * TAU;
+          const endAngle = -Math.PI / 2 + interval.end * TAU;
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, radius, startAngle, endAngle);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+      const events = state.twilight?.events.find((entry) => entry.id === id)?.fractions ?? [];
+      ctx.strokeStyle = style.color;
+      ctx.lineWidth = 1.2;
+      for (const fraction of events) {
+        const angle = -Math.PI / 2 + fraction * TAU;
+        const inner = radius - 4;
+        const outer = radius + 4;
+        ctx.beginPath();
+        ctx.moveTo(center.x + Math.cos(angle) * inner, center.y + Math.sin(angle) * inner);
+        ctx.lineTo(center.x + Math.cos(angle) * outer, center.y + Math.sin(angle) * outer);
+        ctx.stroke();
+      }
+      ctx.fillStyle = style.color;
+      ctx.font = "8px Segoe UI, sans-serif";
+      const labelAngle = -Math.PI / 2 + style.fraction * TAU;
+      const labelX = center.x + Math.cos(labelAngle) * (radius + 4);
+      const labelY = center.y + Math.sin(labelAngle) * (radius + 4);
+      ctx.textAlign = labelX < center.x ? "right" : "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(style.label, labelX, labelY);
     }
     ctx.restore();
   }
 
-  drawHands(ctx, center, skyRadius, state) {
-    const sidereal = localSiderealHours(state.date, state.location.lon);
-    const siderealAngle = sidereal / 24 * TAU;
-    const solarAngle = localClockFraction(state.date) * TAU;
-    const drawHand = (angle, length, color, width, dash = []) => {
-      ctx.save();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.lineCap = "round";
-      ctx.setLineDash(dash);
-      ctx.beginPath();
-      ctx.moveTo(center.x, center.y);
-      ctx.lineTo(center.x + Math.sin(angle) * length, center.y - Math.cos(angle) * length);
-      ctx.stroke();
-      ctx.restore();
-    };
-    drawHand(solarAngle, skyRadius * 0.58, "rgba(121, 200, 210, 0.42)", 1, [3, 5]);
-    drawHand(siderealAngle, skyRadius * 0.88, COLORS.gold, 1.4);
+  drawTimeRing(ctx, center, skyRadius, state) {
+    const { time, timeOuter } = this.ringLayout(skyRadius);
     ctx.save();
-    ctx.fillStyle = COLORS.gold;
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, 3.1, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(242, 195, 108, 0.35)";
+    ctx.strokeStyle = "rgba(195, 209, 236, 0.5)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(center.x, center.y, 8, 0, TAU);
+    ctx.arc(center.x, center.y, time, 0, TAU);
     ctx.stroke();
-    ctx.restore();
+    ctx.strokeStyle = "rgba(242, 195, 108, 0.42)";
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, timeOuter, 0, TAU);
+    ctx.stroke();
 
-    const handPoint = {
-      x: center.x + Math.sin(siderealAngle) * skyRadius * 0.88,
-      y: center.y - Math.cos(siderealAngle) * skyRadius * 0.88,
-    };
-    ctx.save();
+    for (let index = 0; index < 96; index += 1) {
+      const fraction = index / 96;
+      const angle = -Math.PI / 2 + fraction * TAU;
+      const length = index % 4 === 0 ? 8 : index % 2 === 0 ? 5 : 3;
+      const inner = timeOuter - length;
+      ctx.strokeStyle = index % 4 === 0 ? "rgba(240, 238, 229, 0.72)" : "rgba(137, 147, 171, 0.55)";
+      ctx.lineWidth = index % 4 === 0 ? 1 : 0.7;
+      ctx.beginPath();
+      ctx.moveTo(center.x + Math.cos(angle) * inner, center.y + Math.sin(angle) * inner);
+      ctx.lineTo(center.x + Math.cos(angle) * timeOuter, center.y + Math.sin(angle) * timeOuter);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(216, 196, 142, 0.82)";
+    ctx.font = "9px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const [label, fraction] of [["0h", 0], ["6h", 0.25], ["12h", 0.5], ["18h", 0.75]]) {
+      const angle = -Math.PI / 2 + fraction * TAU;
+      const distance = timeOuter + 5;
+      ctx.fillText(label, center.x + Math.cos(angle) * distance, center.y + Math.sin(angle) * distance);
+    }
+
+    const fraction = state.twilight?.timeFraction ?? localClockFraction(state.date);
+    const markerAngle = -Math.PI / 2 + fraction * TAU;
+    const markerInner = time - 5;
+    const markerOuter = timeOuter + 5;
+    ctx.strokeStyle = COLORS.gold;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(center.x + Math.cos(markerAngle) * markerInner, center.y + Math.sin(markerAngle) * markerInner);
+    ctx.lineTo(center.x + Math.cos(markerAngle) * markerOuter, center.y + Math.sin(markerAngle) * markerOuter);
+    ctx.stroke();
     ctx.fillStyle = COLORS.gold;
     ctx.beginPath();
-    ctx.arc(handPoint.x, handPoint.y, 2.3, 0, TAU);
+    ctx.arc(center.x + Math.cos(markerAngle) * markerOuter, center.y + Math.sin(markerAngle) * markerOuter, 2.7, 0, TAU);
     ctx.fill();
     ctx.restore();
   }

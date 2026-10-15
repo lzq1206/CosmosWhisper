@@ -37,12 +37,11 @@ export function precessEquatorial(raHours, decDeg, date) {
   return { ra: nextRa, dec: nextDec };
 }
 
-export function equatorialToHorizontal(raHours, decDeg, date, latitude, longitude) {
-  const apparent = precessEquatorial(raHours, decDeg, date);
+function equatorialOfDateToHorizontal(raHours, decDeg, date, latitude, longitude) {
   const lst = localSiderealHours(date, longitude);
-  const hourAngle = (lst - apparent.ra) * 15 * DEG;
+  const hourAngle = (lst - raHours) * 15 * DEG;
   const latitudeRad = latitude * DEG;
-  const declinationRad = apparent.dec * DEG;
+  const declinationRad = decDeg * DEG;
   const sinAltitude = Math.sin(latitudeRad) * Math.sin(declinationRad)
     + Math.cos(latitudeRad) * Math.cos(declinationRad) * Math.cos(hourAngle);
   const altitude = Math.asin(clamp(sinAltitude, -1, 1)) * RAD;
@@ -53,7 +52,41 @@ export function equatorialToHorizontal(raHours, decDeg, date, latitude, longitud
     ) + Math.PI,
     TAU,
   ) * RAD;
-  return { altitude, azimuth, ra: apparent.ra, dec: apparent.dec };
+  return { altitude, azimuth, ra: raHours, dec: decDeg };
+}
+
+export function equatorialToHorizontal(raHours, decDeg, date, latitude, longitude) {
+  const apparent = precessEquatorial(raHours, decDeg, date);
+  return equatorialOfDateToHorizontal(apparent.ra, apparent.dec, date, latitude, longitude);
+}
+
+export function solarEquatorial(date) {
+  const T = centuriesSinceJ2000(date);
+  const meanLongitude = mod(280.46646 + 36000.76983 * T + 0.0003032 * T ** 2, 360);
+  const meanAnomaly = (357.52911 + 35999.05029 * T - 0.0001537 * T ** 2) * DEG;
+  const center = (1.914602 - 0.004817 * T - 0.000014 * T ** 2) * Math.sin(meanAnomaly)
+    + (0.019993 - 0.000101 * T) * Math.sin(2 * meanAnomaly)
+    + 0.000289 * Math.sin(3 * meanAnomaly);
+  const trueLongitude = (meanLongitude + center) * DEG;
+  const omega = (125.04 - 1934.136 * T) * DEG;
+  const apparentLongitude = trueLongitude - 0.00569 * DEG - 0.00478 * Math.sin(omega) * DEG;
+  const obliquity = eclipticObliquity(date);
+  const x = Math.cos(apparentLongitude);
+  const y = Math.cos(obliquity) * Math.sin(apparentLongitude);
+  const z = Math.sin(obliquity) * Math.sin(apparentLongitude);
+  return {
+    ra: mod(Math.atan2(y, x), TAU) * RAD / 15,
+    dec: Math.asin(clamp(z, -1, 1)) * RAD,
+  };
+}
+
+export function solarToHorizontal(date, latitude, longitude) {
+  const solar = solarEquatorial(date);
+  return equatorialOfDateToHorizontal(solar.ra, solar.dec, date, latitude, longitude);
+}
+
+export function solarAltitude(date, latitude, longitude) {
+  return solarToHorizontal(date, latitude, longitude).altitude;
 }
 
 export function eclipticObliquity(date) {
