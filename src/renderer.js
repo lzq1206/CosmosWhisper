@@ -393,42 +393,39 @@ export class SkyRenderer {
     ctx.restore();
   }
 
-  drawHorizon(ctx, center, skyRadius) {
+  drawHorizon(ctx, center, skyRadius, state) {
     ctx.save();
     ctx.strokeStyle = "rgba(195, 209, 236, 0.56)";
     ctx.lineWidth = 1.1;
     ctx.beginPath();
     ctx.arc(center.x, center.y, skyRadius, 0, TAU);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(242, 195, 108, 0.45)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, skyRadius + 7, -Math.PI * 0.5, Math.PI * 0.5);
-    ctx.stroke();
 
     const cardinal = [
       ["N", 0], ["E", 90], ["S", 180], ["W", 270],
     ];
+    const labelRadius = state.widgetMode ? skyRadius - 20 : skyRadius + 20;
     ctx.fillStyle = COLORS.ink;
     ctx.font = "11px Segoe UI, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const [label, azimuth] of cardinal) {
       const angle = azimuth * DEG;
-      ctx.fillText(label, center.x + Math.sin(angle) * (skyRadius + 20), center.y - Math.cos(angle) * (skyRadius + 20));
+      ctx.fillText(label, center.x + Math.sin(angle) * labelRadius, center.y - Math.cos(angle) * labelRadius);
     }
     ctx.restore();
   }
 
-  ringLayout(skyRadius) {
+  ringLayout(skyRadius, state) {
+    const compact = state.widgetMode;
     return {
-      time: skyRadius + 38,
-      timeOuter: skyRadius + 46,
+      time: skyRadius + (compact ? 4 : 38),
+      timeOuter: skyRadius + (compact ? 12 : 46),
     };
   }
 
   drawTimeRing(ctx, center, skyRadius, state) {
-    const { time, timeOuter } = this.ringLayout(skyRadius);
+    const { time, timeOuter } = this.ringLayout(skyRadius, state);
     const colors = {
       day: "#f4f1df",
       standard: "#f6e2b4",
