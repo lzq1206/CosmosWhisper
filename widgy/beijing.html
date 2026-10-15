@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#030817" />
+    <title>CosmosWhisper · 北京 Widgy</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <style>
+      html,
+      body {
+        width: 1600px;
+        height: 1600px;
+        min-width: 1600px;
+        min-height: 1600px;
+        overflow: hidden;
+      }
+
+      body {
+        display: block;
+      }
+
+      #sky-app {
+        position: relative;
+        inset: auto;
+        width: 1600px;
+        height: 1600px;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="sky-app" aria-label="CosmosWhisper 北京本地天空星图">
+      <canvas
+        id="sky-canvas"
+        role="img"
+        aria-label="北京本地天空星图"
+        aria-describedby="canvas-status"
+      ></canvas>
+      <p class="sr-only" id="canvas-status" role="status">星图加载中。</p>
+    </main>
+    <script>
+      try {
+        localStorage.setItem("cosmos-whisper-location", JSON.stringify({
+          lat: 39.9042,
+          lon: 116.4074,
+          name: "北京",
+          source: "beijing-widget",
+        }));
+      } catch {}
+    </script>
+    <script type="module" src="../src/main.js"></script>
+  </body>
+</html>

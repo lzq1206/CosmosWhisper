@@ -28,15 +28,15 @@ python -m http.server 4173
 
 ## Widgy 北京预设
 
-已生成 [`widgy/cosmoswhisper-beijing.widgy.json`](widgy/cosmoswhisper-beijing.widgy.json)，基于公开 Widgy JSON 导出样本制作。Widgy 中选择 **Import Widget → Import JSON**，导入这个文件即可。
+推荐直接使用 1600×1600 的 Widgy 专用网页地址：
 
-该版本是北京坐标（北纬 39.9042°、东经 116.4074°、UTC+8）的静态星图快照，背景 SVG 托管在 GitHub Pages。需要刷新日期时，在仓库根目录运行：
-
-```bash
-node scripts/generate-beijing-widgy.mjs
+```text
+https://lzq1206.github.io/CosmosWhisper/widgy/beijing.html
 ```
 
-Widgy 不会执行本项目的 JavaScript 天文计算，因此该预设不是秒级实时小组件；完整实时星图仍使用网页版本。
+在 Widgy 的 Web URL、网页截图或 JavaScript 图层中使用这个地址。页面会强制使用北京坐标，并把 Canvas 固定为完整的 1600×1600 方形，避免截图只取顶部而丢失底部。
+
+另外也保留 [`widgy/cosmoswhisper-beijing.widgy.json`](widgy/cosmoswhisper-beijing.widgy.json) 导入文件。Widgy 中选择 **Import Widget → Import JSON** 时，需要粘贴完整 JSON 内容，而不是只粘贴文件网址。
 
 ## GitHub Pages
 
