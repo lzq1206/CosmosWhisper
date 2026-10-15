@@ -1,0 +1,67 @@
+:root {
+  color-scheme: dark;
+  --night: #030817;
+  --gold: #f2c36c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, #0c1d40 0%, #06122b 38%, var(--night) 78%);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+#sky-app {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#sky-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+}
+
+#sky-canvas:focus-visible {
+  outline: 1px solid rgba(242, 195, 108, 0.72);
+  outline-offset: -5px;
+}
+
+#sky-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sky-canvas {
+    scroll-behavior: auto;
+  }
+}
