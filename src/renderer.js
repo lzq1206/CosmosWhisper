@@ -1,6 +1,5 @@
 import {
   DEG,
-  RAD,
   TAU,
   clamp,
   eclipticToHorizontal,
@@ -13,7 +12,7 @@ import {
 } from "./astro.js";
 import { CONSTELLATIONS } from "./data/constellations.js";
 import { MILKY_WAY_BANDS } from "./data/milkyWay.js";
-import { STAR_BY_ID, STARS } from "./data/stars.js";
+import { STARS } from "./data/stars.js";
 
 const COLORS = {
   ink: "#f0eee5",
@@ -30,25 +29,21 @@ const COLORS = {
 
 const visibleAltitude = (altitude) => altitude >= -0.7;
 
-function pathFromEquatorial(ctx, points, project, close = false) {
+function pathFromEquatorial(ctx, points, project) {
   let started = false;
-  let lastPoint = null;
   for (const [ra, dec] of points) {
     const point = project(ra, dec);
     if (!point) {
       started = false;
-      lastPoint = null;
       continue;
     }
-    if (!started || (lastPoint && Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y) > 120)) {
+    if (!started) {
       ctx.moveTo(point.x, point.y);
       started = true;
     } else {
       ctx.lineTo(point.x, point.y);
     }
-    lastPoint = point;
   }
-  if (close && started) ctx.closePath();
 }
 
 function starColor(tone) {
@@ -100,10 +95,10 @@ export class SkyRenderer {
     if (!this.metrics || !visibleAltitude(horizontal.altitude)) return null;
     const { baseRadius, centerX, centerY } = this.metrics;
     const radius = baseRadius * state.zoom * (1 - clamp(horizontal.altitude, 0, 90) / 90);
-    const angle = horizontal.azimuth * DEG + state.rotation;
+    const angle = horizontal.azimuth * DEG;
     return {
-      x: centerX + state.pan.x + radius * Math.sin(angle),
-      y: centerY + state.pan.y - radius * Math.cos(angle),
+      x: centerX + radius * Math.sin(angle),
+      y: centerY - radius * Math.cos(angle),
       radius,
       altitude: horizontal.altitude,
       azimuth: horizontal.azimuth,
@@ -123,8 +118,8 @@ export class SkyRenderer {
     const { width, height, centerX, centerY, baseRadius } = this.metrics;
     const ctx = this.ctx;
     const center = {
-      x: centerX + state.pan.x,
-      y: centerY + state.pan.y,
+      x: centerX,
+      y: centerY,
     };
     const skyRadius = baseRadius * state.zoom;
 
@@ -283,21 +278,18 @@ export class SkyRenderer {
     ctx.save();
     ctx.beginPath();
     let started = false;
-    let lastPoint = null;
     for (const entry of points) {
       const point = this.projectHorizontal(entry.horizontal, state);
       if (!point) {
         started = false;
-        lastPoint = null;
         continue;
       }
-      if (!started || (lastPoint && Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y) > 120)) {
+      if (!started) {
         ctx.moveTo(point.x, point.y);
         started = true;
       } else {
         ctx.lineTo(point.x, point.y);
       }
-      lastPoint = point;
     }
     ctx.strokeStyle = "rgba(242, 195, 108, 0.72)";
     ctx.lineWidth = 1.05;
@@ -321,9 +313,11 @@ export class SkyRenderer {
     ctx.lineWidth = 0.65;
     ctx.setLineDash([3, 5]);
     for (const constellation of CONSTELLATIONS) {
-      ctx.beginPath();
-      pathFromEquatorial(ctx, constellation.boundary, (ra, dec) => this.projectEquatorial(ra, dec, state), true);
-      ctx.stroke();
+      for (const boundary of constellation.boundaryParts) {
+        ctx.beginPath();
+        pathFromEquatorial(ctx, boundary, (ra, dec) => this.projectEquatorial(ra, dec, state));
+        ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -335,16 +329,9 @@ export class SkyRenderer {
     ctx.setLineDash([3, 4]);
     ctx.lineCap = "round";
     for (const constellation of CONSTELLATIONS) {
-      for (const [startId, endId] of constellation.lines) {
-        const start = STAR_BY_ID.get(startId);
-        const end = STAR_BY_ID.get(endId);
-        if (!start || !end) continue;
-        const first = this.projectEquatorial(start.ra, start.dec, state);
-        const second = this.projectEquatorial(end.ra, end.dec, state);
-        if (!first || !second) continue;
+      for (const line of constellation.lines) {
         ctx.beginPath();
-        ctx.moveTo(first.x, first.y);
-        ctx.lineTo(second.x, second.y);
+        pathFromEquatorial(ctx, line, (ra, dec) => this.projectEquatorial(ra, dec, state));
         ctx.stroke();
       }
     }
@@ -400,10 +387,12 @@ export class SkyRenderer {
     ctx.textAlign = "center";
     ctx.font = "10px Segoe UI, sans-serif";
     for (const constellation of CONSTELLATIONS) {
-      const point = this.projectEquatorial(constellation.label[0], constellation.label[1], state);
-      if (!point) continue;
-      ctx.fillStyle = "rgba(216, 196, 142, 0.64)";
-      ctx.fillText(constellation.name, point.x, point.y);
+      for (const label of constellation.labels) {
+        const point = this.projectEquatorial(label[0], label[1], state);
+        if (!point) continue;
+        ctx.fillStyle = "rgba(216, 196, 142, 0.64)";
+        ctx.fillText(constellation.name, point.x, point.y);
+      }
     }
     ctx.restore();
   }
@@ -463,8 +452,8 @@ export class SkyRenderer {
 
   drawHands(ctx, center, skyRadius, state) {
     const sidereal = localSiderealHours(state.date, state.location.lon);
-    const siderealAngle = sidereal / 24 * TAU + state.rotation;
-    const solarAngle = localClockFraction(state.date) * TAU + state.rotation;
+    const siderealAngle = sidereal / 24 * TAU;
+    const solarAngle = localClockFraction(state.date) * TAU;
     const drawHand = (angle, length, color, width, dash = []) => {
       ctx.save();
       ctx.strokeStyle = color;

@@ -29,8 +29,6 @@ const state = {
     labels: true,
   },
   zoom: 1,
-  rotation: 0,
-  pan: { x: 0, y: 0 },
   hoverStarId: null,
   selectedStarId: null,
 };
@@ -82,7 +80,7 @@ function setLocation(location) {
 function render() {
   const result = renderer.render(state);
   const lst = localSiderealHours(state.date, state.location.lon);
-  canvasStatus.textContent = `${formatDate(state.date)}，${state.location.name}。可见 ${result.visibleCount} 颗亮星，恒星时 ${formatHours(lst)}。拖动旋转，滚轮缩放。`;
+  canvasStatus.textContent = `${formatDate(state.date)}，${state.location.name}。可见 ${result.visibleCount} 颗五等及以上恒星，恒星时 ${formatHours(lst)}。点击恒星选择，滚轮缩放。方位固定不随拖动改变。`;
 }
 
 function coordinatesForPointer(event) {
@@ -109,11 +107,9 @@ function startPointer(event) {
     pointerId: event.pointerId,
     startX: x,
     startY: y,
-    startRotation: state.rotation,
     moved: false,
   };
   canvas.setPointerCapture(event.pointerId);
-  canvas.classList.add("is-dragging");
 }
 
 function movePointer(event) {
@@ -123,10 +119,6 @@ function movePointer(event) {
   }
   const { x, y } = coordinatesForPointer(event);
   if (Math.abs(x - pointerState.startX) > 3 || Math.abs(y - pointerState.startY) > 3) pointerState.moved = true;
-  if (pointerState.moved) {
-    state.rotation = pointerState.startRotation + (x - pointerState.startX) / (renderer.metrics?.baseRadius || 250);
-    render();
-  }
 }
 
 function endPointer(event) {
@@ -139,7 +131,6 @@ function endPointer(event) {
     render();
   }
   pointerState = null;
-  canvas.classList.remove("is-dragging");
   try {
     canvas.releasePointerCapture(event.pointerId);
   } catch {
@@ -154,8 +145,6 @@ function adjustZoom(amount) {
 
 function resetView() {
   state.zoom = 1;
-  state.rotation = 0;
-  state.pan = { x: 0, y: 0 };
   state.selectedStarId = null;
   state.hoverStarId = null;
   render();
@@ -210,14 +199,6 @@ function handleShortcut(event) {
   } else if (event.key === "-") {
     event.preventDefault();
     adjustZoom(-0.12);
-  } else if (event.key === "ArrowLeft") {
-    event.preventDefault();
-    state.rotation -= 0.08;
-    render();
-  } else if (event.key === "ArrowRight") {
-    event.preventDefault();
-    state.rotation += 0.08;
-    render();
   }
 }
 
