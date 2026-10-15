@@ -18,7 +18,7 @@ CosmosWhisper 将公开星图数据在构建阶段转换为静态 ES modules；G
 ## 银河
 
 - 输入文件：[`data/mw.json`](https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/mw.json)，文件 SHA `ce06eaa01d80a4eed149c538d2d162c919b58a84`，来自同一 BSD-3-Clause 项目快照。
-- 数据由 Jose R. Vieira 的银河轮廓目录提供五档 MultiPolygon；本项目取 `ol1` 的外环，按 RA=0/24 周期展开后转换为赤经小时/赤纬，作为一条连续视觉包络填充，不把五档中心线串联，也不保留内部暗云孔洞。它是连续视觉带，不是精密银河边界测量。
+- 数据由 Jose R. Vieira 的银河轮廓目录提供五档 MultiPolygon；本项目取 `ol1` 的两条主边界环，按 RA=0/24 周期展开后转换为赤经小时/赤纬，用 even-odd 填充两条闭合曲线夹住的连续带，不把五档中心线串联，也不保留内部暗云孔洞。它是连续视觉带，不是精密银河边界测量。
 - 银河带在 Canvas 内统一填充为白色半透明面，地平线外部分通过圆形裁剪隐藏。
 
 ## 太阳系天体

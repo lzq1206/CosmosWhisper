@@ -9,7 +9,7 @@ import {
   formatHours,
 } from "./astro.js";
 import { CONSTELLATIONS } from "./data/constellations.js";
-import { MILKY_WAY_BAND } from "./data/milkyWay.js";
+import { MILKY_WAY_RINGS } from "./data/milkyWay.js";
 import { STARS } from "./data/stars.js";
 
 const COLORS = {
@@ -185,9 +185,11 @@ export class SkyRenderer {
   drawMilkyWay(ctx, state) {
     ctx.save();
     ctx.beginPath();
-    pathFromEquatorial(ctx, MILKY_WAY_BAND, (ra, dec) => this.projectEquatorialUnclipped(ra, dec, state));
+    for (const ring of MILKY_WAY_RINGS) {
+      pathFromEquatorial(ctx, ring, (ra, dec) => this.projectEquatorialUnclipped(ra, dec, state));
+    }
     ctx.fillStyle = "rgba(255, 255, 255, 0.11)";
-    ctx.fill();
+    ctx.fill("evenodd");
     ctx.restore();
   }
 

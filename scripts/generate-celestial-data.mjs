@@ -112,16 +112,16 @@ const constellations = constellationIds.map((id) => ({
 }));
 
 const milkyWayFeature = milkyWaySourceData.features.find((feature) => feature.id === "ol1");
-const milkyWayOuterRing = milkyWayFeature?.geometry?.coordinates?.[0]?.[0];
-if (!milkyWayOuterRing || milkyWayOuterRing.length < 3) throw new Error("The public Milky Way outline has no outer ring.");
-const milkyWay = continuousPath(milkyWayOuterRing);
+const milkyWayRingsSource = milkyWayFeature?.geometry?.coordinates?.[0]?.slice(0, 2) ?? [];
+if (milkyWayRingsSource.length !== 2 || milkyWayRingsSource.some((ring) => ring.length < 3)) throw new Error("The public Milky Way outline has no two main boundary rings.");
+const milkyWayRings = milkyWayRingsSource.map(continuousPath);
 
 const starSource = `const star = (id, ra, dec, magnitude, bv, name, constellation) => ({ id, ra, dec, magnitude, bv, name, constellation, tone: bv !== null && bv < 0.2 ? "blue" : bv !== null && bv > 1.15 ? "warm" : "white" });\n\nexport const STARS = [\n${stars.map((entry) => `  star(${json(entry.id)}, ${entry.ra}, ${entry.dec}, ${entry.magnitude}, ${entry.bv}, ${json(entry.name)}, ${json(entry.constellation)}),`).join("\n")}\n];\n\nexport const STAR_BY_ID = new Map(STARS.map((entry) => [entry.id, entry]));\n`;
 const constellationSource = `const constellation = (id, name, abbr, lines, boundaryParts, labels) => ({ id, name, abbr, lines, boundaryParts, labels });\n\nexport const CONSTELLATIONS = ${JSON.stringify(constellations, null, 2)};\n\nexport const CONSTELLATION_BY_ID = new Map(CONSTELLATIONS.map((entry) => [entry.id, entry]));\nexport const CONSTELLATION_BY_NAME = new Map(CONSTELLATIONS.map((entry) => [entry.name, entry]));\n`;
-const milkyWayModule = `// Continuous outer envelope from d3-celestial mw.json (ol1), converted to J2000 RA hours / declination degrees.\nexport const MILKY_WAY_BAND = ${JSON.stringify(milkyWay)};\n`;
+const milkyWayModule = `// Two continuous boundary curves from d3-celestial mw.json (ol1), converted to J2000 RA hours / declination degrees.\nexport const MILKY_WAY_RINGS = ${JSON.stringify(milkyWayRings)};\n`;
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 await writeFile(new URL("stars.js", OUTPUT_DIR), starSource);
 await writeFile(new URL("constellations.js", OUTPUT_DIR), constellationSource);
 await writeFile(new URL("milkyWay.js", OUTPUT_DIR), milkyWayModule);
-console.log(`Generated ${stars.length} stars, ${constellations.length} constellations, and ${milkyWay.length} Milky Way envelope points.`);
+console.log(`Generated ${stars.length} stars, ${constellations.length} constellations, and ${milkyWayRings.length} Milky Way boundary curves.`);
