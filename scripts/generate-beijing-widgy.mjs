@@ -133,42 +133,16 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
 </svg>
 `;
 
-const imageLayer = {
-  b: { b: 0, a: [{ a: 0, c: 0, d: 824, b: 824 }] },
-  t: { a: [{ a: 15, c: 0, b: 880, d: 880 }], b: 0 },
-  c: { a: [{ a: 0, c: 0, b: 824, d: 824 }], b: 0 },
-  d: { b: 0, a: [{ a: 1600, b: 824, c: 0, d: 824 }] },
-  1: "Web URL",
-  h: { a: [{ a: 90, b: 880, d: 880 }], b: 0 },
-  2: "https://lzq1206.github.io/CosmosWhisper/widgy/beijing-sky.svg",
-  z: "5",
-  e: { b: 0, a: [{ c: 0, d: 824, b: 824, a: 1600 }] },
-  d0: 27,
-};
-const widgy = {
-  q2: "",
-  zzz: "",
-  p2: "",
-  0: 29,
-  3: "CosmosWhisper · 北京",
-  5: "CosmosWhisper",
-  1: [imageLayer],
-  a2: 51,
-  4: "北京本地天空星图，静态快照",
-  6: 2,
-  20: false,
-  10: true,
-  28: true,
-  39: { "System Bold": 1, "System Medium": 1 },
-  21: false,
-  m2: "",
-  l2: "",
-  n2: "",
-  o2: "",
-  9: 7045,
-};
+const widgyOutput = new URL("../widgy/cosmoswhisper-beijing.widgy.json", import.meta.url);
+const widgy = JSON.parse(await (await import("node:fs/promises")).readFile(widgyOutput, "utf8"));
+widgy["3"] = "CosmosWhisper · 北京";
+widgy["5"] = "CosmosWhisper";
+widgy["4"] = "北京本地天空星图 · 静态快照";
+const webLayer = (widgy["1"] ?? []).find((layer) => layer["1"] === "Web URL");
+if (!webLayer) throw new Error("The Widgy template has no Web URL layer.");
+webLayer["2"] = "https://lzq1206.github.io/CosmosWhisper/widgy/beijing-sky.svg";
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 await writeFile(new URL("beijing-sky.svg", OUTPUT_DIR), svg);
-await writeFile(new URL("cosmoswhisper-beijing.widgy.json", OUTPUT_DIR), `${JSON.stringify(widgy, null, 2)}\n`);
+await writeFile(widgyOutput, `${JSON.stringify(widgy, null, 2)}\n`);
 console.log(`Generated Beijing Widgy snapshot for ${DATE.toISOString()}.`);
