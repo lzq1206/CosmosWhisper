@@ -44,7 +44,7 @@ https://lzq1206.github.io/CosmosWhisper/widgy/
 https://lzq1206.github.io/CosmosWhisper/widgy/beijing.html
 ```
 
-在 Widgy 的 Web URL、网页截图或 JavaScript 图层中使用这个地址。页面会强制使用北京坐标，方形尺寸自动取视口短边，并从左上角开始绘制，避免固定 1600 页面只显示左上角。
+在 Widgy 的 Web URL、网页截图或 JavaScript 图层中使用这个地址。页面会强制使用北京坐标，方形尺寸自动取视口短边，并在大组件中水平、垂直居中，避免上下左右留白不等。
 
 另外也保留 [`widgy/cosmoswhisper-beijing.widgy.json`](widgy/cosmoswhisper-beijing.widgy.json) 导入文件。Widgy 中选择 **Import Widget → Import JSON** 时，需要粘贴完整 JSON 内容，而不是只粘贴文件网址。
 
