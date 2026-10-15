@@ -63,7 +63,7 @@ export class SkyRenderer {
     this.pixelRatio = 1;
   }
 
-  resize() {
+  resize(state) {
     const rect = this.canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -75,12 +75,14 @@ export class SkyRenderer {
       this.pixelRatio = pixelRatio;
     }
     this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    const shortEdge = Math.min(rect.width, rect.height);
+    const baseRadius = state?.widgetMode ? Math.max(1, shortEdge / 2 - 19) : shortEdge * 0.34;
     this.metrics = {
       width: rect.width,
       height: rect.height,
       centerX: rect.width / 2,
       centerY: rect.height / 2,
-      baseRadius: Math.min(rect.width, rect.height) * 0.34,
+      baseRadius,
     };
   }
 
@@ -118,7 +120,7 @@ export class SkyRenderer {
   }
 
   render(state) {
-    this.resize();
+    this.resize(state);
     if (!this.metrics) return { visibleCount: 0 };
     const { width, height, centerX, centerY, baseRadius } = this.metrics;
     const ctx = this.ctx;
@@ -462,7 +464,7 @@ export class SkyRenderer {
       if (segment.end - segment.start > 0.035) {
         const middle = (segment.start + segment.end) / 2;
         const labelAngle = -Math.PI / 2 + middle * TAU;
-        const labelRadius = timeOuter + 7;
+        const labelRadius = timeOuter + (state.widgetMode ? 1 : 7);
         const labelX = center.x + Math.cos(labelAngle) * labelRadius;
         const labelY = center.y + Math.sin(labelAngle) * labelRadius;
         ctx.fillStyle = colors[segment.id] ?? colors.night;
@@ -492,7 +494,7 @@ export class SkyRenderer {
     ctx.textBaseline = "middle";
     for (const [label, fraction] of [["0h", 0], ["6h", 0.25], ["12h", 0.5], ["18h", 0.75]]) {
       const angle = -Math.PI / 2 + fraction * TAU;
-      const distance = timeOuter + 5;
+      const distance = state.widgetMode ? timeOuter - 1 : timeOuter + 5;
       ctx.fillText(label, center.x + Math.cos(angle) * distance, center.y + Math.sin(angle) * distance);
     }
 
