@@ -28,7 +28,7 @@
         <p class="intro">选择城市后进入同一套方形星盘。时间、晨昏、月照和行星位置会按该城市重新计算。</p>
       </header>
       <div id="city-list"></div>
-      <footer>固定版保持真实方位；活动版以天极为中心随恒星时旋转。所有位置为城市中心近似坐标。</footer>
+      <footer>固定星盘保持真实方位。所有位置为城市中心近似坐标。</footer>
     </main>
     <script type="module">
       import { CITIES } from "../src/data/cities.js";
@@ -47,7 +47,7 @@
         for (const city of cities) {
           const card = document.createElement("div");
           card.className = "city";
-          card.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small><span class="city-actions"><a href="./city.html?city=${encodeURIComponent(city.id)}">固定</a><a href="./planisphere.html?city=${encodeURIComponent(city.id)}">活动</a></span>`;
+          card.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small><span class="city-actions"><a href="./city.html?city=${encodeURIComponent(city.id)}">固定星盘</a></span>`;
           grid.append(card);
         }
         section.append(grid);
