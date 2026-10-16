@@ -47,7 +47,7 @@
         for (const city of cities) {
           const card = document.createElement("div");
           card.className = "city";
-          card.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small><span class="city-actions"><a href="./city.html?city=${encodeURIComponent(city.id)}">固定</a><a href="./planisphere.html?city=${encodeURIComponent(city.id)}">活动</a></span>`;
+          card.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small><span class="city-actions"><a href="./city.html?city=${encodeURIComponent(city.id)}">固定</a><a href="./planisphere.html?city=${encodeURIComponent(city.id)}">活动</a><a href="./astrodea.html?city=${encodeURIComponent(city.id)}">表盘</a></span>`;
           grid.append(card);
         }
         section.append(grid);
