@@ -53,57 +53,37 @@ function resize() {
   return true;
 }
 
-function horizonScale() {
-  return Math.max(.25, Math.tan(Math.abs(city.lat) * DEG / 2));
+function horizonAltitudeAtHourAngle(hourAngle) {
+  return Math.atan(-Math.cos(hourAngle * 15 * DEG) * Math.tan(city.lat * DEG)) / DEG;
 }
 
-function projectOuter(ra, dec) {
-  const horizontal = equatorialToHorizontal(ra, dec, state.date, city.lat, city.lon);
-  const polarDec = state.latitudeSign * horizontal.dec;
+function projectCoordinates(ra, dec, horizontal, allowInvisible = false) {
+  if (!allowInvisible && horizontal.altitude < -0.7) return null;
+  const polarDec = state.latitudeSign * dec;
   const radial = Math.tan((90 - polarDec) * DEG / 2);
+  const lst = localSiderealHours(state.date, city.lon);
+  const hourAngle = (lst - ra) * state.latitudeSign * 15 * DEG;
   const normalized = radial / horizonScale();
-  if (!Number.isFinite(normalized) || normalized > 1.04) return null;
-  const hourAngle = (localSiderealHours(state.date, city.lon) - horizontal.ra) * state.latitudeSign * 15 * DEG;
   return {
     x: metrics.centerX + Math.sin(hourAngle) * metrics.radius * normalized,
     y: metrics.centerY - Math.cos(hourAngle) * metrics.radius * normalized,
+    altitude: horizontal.altitude,
   };
 }
 
-function visibleCircle() {
-  return {
-    centerX: metrics.centerX,
-    centerY: metrics.centerY + metrics.radius * .22,
-    radius: metrics.radius * .52,
-  };
-}
-
-function projectVisible(ra, dec) {
+function projectEquatorial(ra, dec, allowInvisible = false) {
   const horizontal = equatorialToHorizontal(ra, dec, state.date, city.lat, city.lon);
-  if (horizontal.altitude < -0.7) return null;
-  const window = visibleCircle();
-  const radial = window.radius * (1 - clamp(horizontal.altitude, 0, 90) / 90);
-  const angle = horizontal.azimuth * DEG;
-  return {
-    x: window.centerX + Math.sin(angle) * radial,
-    y: window.centerY - Math.cos(angle) * radial,
-  };
+  return projectCoordinates(horizontal.ra, horizontal.dec, horizontal, allowInvisible);
 }
 
-function projectVisibleOfDate(ra, dec) {
+function projectOfDate(ra, dec, allowInvisible = false) {
   const horizontal = equatorialOfDateToHorizontal(ra, dec, state.date, city.lat, city.lon);
-  if (horizontal.altitude < -0.7) return null;
-  const window = visibleCircle();
-  const radial = window.radius * (1 - clamp(horizontal.altitude, 0, 90) / 90);
-  const angle = horizontal.azimuth * DEG;
-  return {
-    x: window.centerX + Math.sin(angle) * radial,
-    y: window.centerY - Math.cos(angle) * radial,
-  };
+  return projectCoordinates(ra, dec, horizontal, allowInvisible);
 }
 
-function horizonAltitudeAtHourAngle(hourAngle) {
-  return Math.atan(-Math.cos(hourAngle * 15 * DEG) * Math.tan(city.lat * DEG)) / DEG;
+function horizonScale() {
+  const lowestDeclination = 90 - Math.abs(city.lat);
+  return Math.tan((90 - lowestDeclination) * DEG / 2) || 1;
 }
 
 function horizonPath() {
@@ -112,7 +92,8 @@ function horizonPath() {
     const hourAngle = index / 6;
     const dec = horizonAltitudeAtHourAngle(hourAngle);
     const ra = localSiderealHours(state.date, city.lon) - hourAngle;
-    points.push(projectVisibleOfDate(ra, dec));
+    const point = projectOfDate(ra, dec, true);
+    points.push(point);
   }
   return points;
 }
@@ -142,7 +123,7 @@ function drawSurface() {
   ctx.fill();
 }
 
-function drawOuterGrid() {
+function drawGrid() {
   const { centerX, centerY, radius } = metrics;
   ctx.save();
   ctx.strokeStyle = COLORS.grid;
@@ -157,7 +138,8 @@ function drawOuterGrid() {
   for (let hour = 0; hour < 24; hour += 2) {
     const points = [];
     for (let declination = 0; declination <= 90 - Math.abs(city.lat); declination += 2) {
-      points.push(projectOuter(hour, state.latitudeSign * declination));
+      const point = projectEquatorial(hour, state.latitudeSign * declination, true);
+      points.push(point);
     }
     ctx.beginPath();
     drawPath(points);
@@ -166,48 +148,26 @@ function drawOuterGrid() {
   ctx.restore();
 }
 
-function drawVisibleGrid() {
-  const window = visibleCircle();
-  ctx.save();
-  ctx.strokeStyle = "rgba(145,164,201,.28)";
-  ctx.lineWidth = .6;
-  ctx.setLineDash([2, 6]);
-  for (const altitude of [30, 60]) {
-    const radial = window.radius * (1 - altitude / 90);
-    ctx.beginPath();
-    ctx.arc(window.centerX, window.centerY, radial, 0, TAU);
-    ctx.stroke();
-  }
-  for (let azimuth = 0; azimuth < 360; azimuth += 30) {
-    const angle = azimuth * DEG;
-    ctx.beginPath();
-    ctx.moveTo(window.centerX, window.centerY);
-    ctx.lineTo(window.centerX + Math.sin(angle) * window.radius, window.centerY - Math.cos(angle) * window.radius);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawGalaxy(projector) {
+function drawGalaxy() {
   ctx.save();
   ctx.beginPath();
   for (const ring of MILKY_WAY_RINGS) {
-    drawPath(ring.map(([ra, dec]) => projector(ra, dec)), true);
+    drawPath(ring.map(([ra, dec]) => projectEquatorial(ra, dec, true)), true);
   }
   ctx.fillStyle = COLORS.galaxy;
   ctx.fill("evenodd");
   ctx.restore();
 }
 
-function drawConstellations(projector, colorScale = 1) {
+function drawConstellations() {
   ctx.save();
-  ctx.lineWidth = .8 * colorScale;
+  ctx.lineWidth = .8;
   ctx.setLineDash([3, 5]);
   ctx.strokeStyle = COLORS.boundary;
   for (const constellation of CONSTELLATIONS) {
     for (const boundary of constellation.boundaryParts) {
       ctx.beginPath();
-      drawPath(boundary.map(([ra, dec]) => projector(ra, dec)));
+      drawPath(boundary.map(([ra, dec]) => projectEquatorial(ra, dec)));
       ctx.stroke();
     }
   }
@@ -215,94 +175,57 @@ function drawConstellations(projector, colorScale = 1) {
   for (const constellation of CONSTELLATIONS) {
     for (const line of constellation.lines) {
       ctx.beginPath();
-      drawPath(line.map(([ra, dec]) => projector(ra, dec)));
+      drawPath(line.map(([ra, dec]) => projectEquatorial(ra, dec)));
       ctx.stroke();
     }
   }
   ctx.restore();
 }
 
-function drawOuterStars() {
+function drawStars() {
   for (const star of STARS) {
-    const point = projectOuter(star.ra, star.dec);
+    const point = projectEquatorial(star.ra, star.dec);
     if (!point) continue;
-    const radius = clamp(1 + (3.6 - star.magnitude) * .52, .9, 3.8);
+    const radius = clamp(1.1 + (3.6 - star.magnitude) * .6, 1.1, 4.6);
     const color = star.tone === "warm" ? "#ffd596" : star.tone === "blue" ? "#c9dcff" : COLORS.ink;
     ctx.fillStyle = color;
-    ctx.globalAlpha = .55;
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, radius, 0, TAU);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-}
-
-function drawVisibleStars() {
-  const window = visibleCircle();
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(window.centerX, window.centerY, window.radius, 0, TAU);
-  ctx.clip();
-  for (const star of STARS) {
-    const point = projectVisible(star.ra, star.dec);
-    if (!point) continue;
-    const radius = clamp(1.1 + (3.6 - star.magnitude) * .62, 1, 4.8);
-    const color = star.tone === "warm" ? "#ffd596" : star.tone === "blue" ? "#c9dcff" : COLORS.ink;
-    ctx.fillStyle = color;
-    ctx.globalAlpha = clamp(1.02 - star.magnitude / 7, .45, 1);
+    ctx.globalAlpha = clamp(1.02 - star.magnitude / 7, .42, 1);
     ctx.beginPath();
     ctx.arc(point.x, point.y, radius, 0, TAU);
     ctx.fill();
     ctx.globalAlpha = 1;
     if (star.magnitude <= 1.2) {
-      ctx.fillStyle = "rgba(240,238,229,.78)";
+      ctx.fillStyle = "rgba(240,238,229,.75)";
       ctx.font = "9px Segoe UI, sans-serif";
       ctx.fillText(star.name, point.x + radius + 3, point.y - radius - 2);
     }
   }
-  ctx.restore();
 }
 
 function drawBodies() {
-  const window = visibleCircle();
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(window.centerX, window.centerY, window.radius, 0, TAU);
-  ctx.clip();
   for (const body of planetaryBodies(state.date, city.lat, city.lon)) {
-    const point = projectVisibleOfDate(body.ra, body.dec);
+    const point = projectEquatorial(body.ra, body.dec);
     if (!point) continue;
     ctx.fillStyle = body.color;
     ctx.beginPath();
-    ctx.arc(point.x, point.y, body.size, 0, TAU);
+    ctx.arc(point.x, point.y, body.size * .9, 0, TAU);
     ctx.fill();
     ctx.font = "9px Segoe UI, sans-serif";
     ctx.fillText(body.name, point.x + body.size + 3, point.y - body.size - 2);
   }
-  ctx.restore();
 }
 
-function drawVisibleWindow() {
-  const window = visibleCircle();
+function drawHorizon() {
+  const points = horizonPath();
   ctx.save();
   ctx.beginPath();
-  ctx.arc(window.centerX, window.centerY, window.radius, 0, TAU);
+  ctx.arc(metrics.centerX, metrics.centerY, metrics.radius, 0, TAU);
   ctx.clip();
-  drawVisibleGrid();
-  drawConstellations(projectVisible, 1.1);
-  drawVisibleStars();
-  drawBodies();
-  ctx.restore();
-  ctx.save();
-  ctx.strokeStyle = COLORS.gold;
-  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(window.centerX, window.centerY, window.radius, 0, TAU);
+  drawPath(points, true);
+  ctx.strokeStyle = COLORS.ink;
+  ctx.lineWidth = 1.3;
   ctx.stroke();
-  ctx.fillStyle = COLORS.muted;
-  ctx.font = "9px Segoe UI, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("当前可见", window.centerX, window.centerY + window.radius - 12);
   ctx.restore();
 }
 
@@ -331,6 +254,12 @@ function drawDial() {
   ctx.moveTo(centerX + Math.cos(pointerAngle) * (radius - 5), centerY + Math.sin(pointerAngle) * (radius - 5));
   ctx.lineTo(centerX + Math.cos(pointerAngle) * (radius + 12), centerY + Math.sin(pointerAngle) * (radius + 12));
   ctx.stroke();
+  const cardinal = [["N", 0], ["E", 90], ["S", 180], ["W", 270]];
+  ctx.fillStyle = COLORS.ink;
+  for (const [label, azimuth] of cardinal) {
+    const angle = azimuth * DEG;
+    ctx.fillText(label, centerX + Math.sin(angle) * (radius - 19), centerY - Math.cos(angle) * (radius - 19));
+  }
   ctx.restore();
 }
 
@@ -343,12 +272,13 @@ function render() {
   ctx.beginPath();
   ctx.arc(centerX, centerY, radius, 0, TAU);
   ctx.clip();
-  drawGalaxy(projectOuter);
-  drawOuterGrid();
-  drawConstellations(projectOuter, .72);
-  drawOuterStars();
+  drawGalaxy();
+  drawGrid();
+  drawConstellations();
+  drawStars();
+  drawBodies();
   ctx.restore();
-  drawVisibleWindow();
+  drawHorizon();
   drawDial();
   status.textContent = `${city.name} · 活动星图 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
 }
