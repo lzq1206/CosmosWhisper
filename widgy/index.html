@@ -16,6 +16,7 @@
       .section{padding-top:28px}.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}.section h2{margin:0;font:400 21px Georgia,"Songti SC",serif}.count{color:var(--faint,#64738f);font-size:10px;letter-spacing:.12em}
       .city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px}
       .city{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:9px 11px;border:1px solid rgba(132,154,194,.2);border-radius:7px;background:rgba(10,21,48,.82);color:var(--ink);text-decoration:none;transition:border-color .15s,background .15s,transform .15s}.city:hover{border-color:var(--cyan);background:rgba(121,200,210,.1);transform:translateY(-1px)}.city small{color:#63728f;font-size:9px;font-variant-numeric:tabular-nums}.city strong{font-size:12px;font-weight:500}
+      .city-actions{display:flex;gap:5px;margin-left:auto}.city-actions a{padding:3px 5px;color:var(--cyan);border:1px solid rgba(121,200,210,.3);border-radius:4px;font-size:9px;text-decoration:none}.city-actions a:hover{color:var(--ink);border-color:var(--cyan)}
       footer{padding-top:32px;color:#63728f;font-size:10px}
       @media (max-width:600px){body{padding:18px 12px 32px}header{display:block;padding-bottom:22px}.intro{max-width:none;margin-top:12px;text-align:left}.city-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>
@@ -27,7 +28,7 @@
         <p class="intro">选择城市后进入同一套方形星盘。时间、晨昏、月照和行星位置会按该城市重新计算。</p>
       </header>
       <div id="city-list"></div>
-      <footer>所有位置为城市中心近似坐标；点击城市可打开 Widgy 兼容的方形网页星盘。</footer>
+      <footer>固定版保持真实方位；活动版以天极为中心随恒星时旋转。所有位置为城市中心近似坐标。</footer>
     </main>
     <script type="module">
       import { CITIES } from "../src/data/cities.js";
@@ -44,11 +45,10 @@
         const grid = document.createElement("div");
         grid.className = "city-grid";
         for (const city of cities) {
-          const link = document.createElement("a");
-          link.className = "city";
-          link.href = `./city.html?city=${encodeURIComponent(city.id)}`;
-          link.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small>`;
-          grid.append(link);
+          const card = document.createElement("div");
+          card.className = "city";
+          card.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small><span class="city-actions"><a href="./city.html?city=${encodeURIComponent(city.id)}">固定</a><a href="./planisphere.html?city=${encodeURIComponent(city.id)}">活动</a></span>`;
+          grid.append(card);
         }
         section.append(grid);
         list.append(section);
