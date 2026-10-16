@@ -36,6 +36,12 @@ https://lzq1206.github.io/CosmosWhisper/widgy/
 
 城市链接只进入固定真实方位版 `city.html?city=...`；其他活动星图实验页仍保留独立地址，但不放在这个导航页中。
 
+Astrodea 风格表盘实验地址：
+
+```text
+https://lzq1206.github.io/CosmosWhisper/widgy/watch/?city=beijing
+```
+
 ## Widgy 北京预设
 
 推荐直接使用 Widgy 专用的自适应方形网页地址：
