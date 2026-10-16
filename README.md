@@ -34,18 +34,12 @@ python -m http.server 4173
 https://lzq1206.github.io/CosmosWhisper/widgy/
 ```
 
-城市链接会提供三个版本：固定真实方位版 `city.html?city=...`，以天极为中心、随恒星时旋转的活动星图版 `planisphere.html?city=...`，以及 Astrodea 风格的表盘实验版 `astrodea.html?city=...`。
+城市链接会提供两个版本：固定真实方位版 `city.html?city=...`，以及以天极为中心、随恒星时旋转的活动星图版 `planisphere.html?city=...`。
 
 北京活动星图示例：
 
 ```text
 https://lzq1206.github.io/CosmosWhisper/widgy/planisphere.html?city=beijing
-```
-
-北京 Astrodea 风格表盘示例：
-
-```text
-https://lzq1206.github.io/CosmosWhisper/widgy/astrodea.html?city=beijing
 ```
 
 ## Widgy 北京预设
