@@ -2,6 +2,7 @@ import {
   DEG,
   TAU,
   clamp,
+  centuriesSinceJ2000,
   eclipticToHorizontal,
   equatorialToHorizontal,
   formatAltitude,
@@ -24,6 +25,34 @@ const COLORS = {
   muted: "#8993ab",
   sky: "#071027",
 };
+
+const SOLAR_TERMS = [
+  { longitude: 0, name: "春分" }, { longitude: 15, name: "清明" },
+  { longitude: 30, name: "谷雨" }, { longitude: 45, name: "立夏" },
+  { longitude: 60, name: "小满" }, { longitude: 75, name: "芒种" },
+  { longitude: 90, name: "夏至" }, { longitude: 105, name: "小暑" },
+  { longitude: 120, name: "大暑" }, { longitude: 135, name: "立秋" },
+  { longitude: 150, name: "处暑" }, { longitude: 165, name: "白露" },
+  { longitude: 180, name: "秋分" }, { longitude: 195, name: "寒露" },
+  { longitude: 210, name: "霜降" }, { longitude: 225, name: "立冬" },
+  { longitude: 240, name: "小雪" }, { longitude: 255, name: "大雪" },
+  { longitude: 270, name: "冬至" }, { longitude: 285, name: "小寒" },
+  { longitude: 300, name: "大寒" }, { longitude: 315, name: "立春" },
+  { longitude: 330, name: "雨水" }, { longitude: 345, name: "惊蛰" },
+];
+
+const BEIJING_YEAR_FORMATTER = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Shanghai", year: "numeric" });
+const BEIJING_UTC_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+function solarLongitude(date) {
+  const centuries = centuriesSinceJ2000(date);
+  const meanLongitude = 280.46646 + 36000.76983 * centuries + 0.0003032 * centuries ** 2;
+  const meanAnomaly = (357.52911 + 35999.05029 * centuries - 0.0001537 * centuries ** 2) * DEG;
+  const center = (1.914602 - 0.004817 * centuries - 0.000014 * centuries ** 2) * Math.sin(meanAnomaly)
+    + (0.019993 - 0.000101 * centuries) * Math.sin(2 * meanAnomaly)
+    + 0.000289 * Math.sin(3 * meanAnomaly);
+  return ((meanLongitude + center) % 360 + 360) % 360;
+}
 
 const visibleAltitude = (altitude) => altitude >= -0.7;
 
@@ -54,6 +83,10 @@ function localClockFraction(date) {
   return (date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600) / 24;
 }
 
+function usesWatchDial(state) {
+  return state.homepageMode || state.widgyMode;
+}
+
 export class SkyRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -76,7 +109,9 @@ export class SkyRenderer {
     }
     this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     const shortEdge = Math.min(rect.width, rect.height);
-    const baseRadius = state?.widgetMode ? Math.max(1, shortEdge / 2 - 19) : shortEdge * 0.34;
+    const baseRadius = state?.widgetMode
+      ? Math.max(1, shortEdge / 2 - (usesWatchDial(state) ? 35 : 19))
+      : shortEdge * 0.34;
     this.metrics = {
       width: rect.width,
       height: rect.height,
@@ -91,8 +126,9 @@ export class SkyRenderer {
     const { baseRadius, centerX, centerY } = this.metrics;
     const radius = baseRadius * state.zoom * (1 - clamp(horizontal.altitude, 0, 90) / 90);
     const angle = horizontal.azimuth * DEG;
+    const eastWestDirection = usesWatchDial(state) ? -1 : 1;
     return {
-      x: centerX + radius * Math.sin(angle),
+      x: centerX + eastWestDirection * radius * Math.sin(angle),
       y: centerY - radius * Math.cos(angle),
       radius,
       altitude: horizontal.altitude,
@@ -113,8 +149,9 @@ export class SkyRenderer {
     const { baseRadius, centerX, centerY } = this.metrics;
     const radius = baseRadius * state.zoom * (1 - clamp(horizontal.altitude, -90, 90) / 90);
     const angle = horizontal.azimuth * DEG;
+    const eastWestDirection = usesWatchDial(state) ? -1 : 1;
     return {
-      x: centerX + radius * Math.sin(angle),
+      x: centerX + eastWestDirection * radius * Math.sin(angle),
       y: centerY - radius * Math.cos(angle),
     };
   }
@@ -150,6 +187,7 @@ export class SkyRenderer {
     ctx.restore();
 
     this.drawHorizon(ctx, center, skyRadius, state);
+    if (usesWatchDial(state)) this.drawSolarTermRing(ctx, center, skyRadius, state);
     this.drawTimeRing(ctx, center, skyRadius, state);
     return { visibleCount };
   }
@@ -213,7 +251,11 @@ export class SkyRenderer {
       for (let hour = 0; hour <= 24; hour += 0.25) points.push([hour, dec]);
       ctx.beginPath();
       pathFromEquatorial(ctx, points, (ra, declination) => this.projectEquatorial(ra, declination, state));
-      ctx.strokeStyle = dec === 0 ? "rgba(153, 173, 211, 0.35)" : "rgba(119, 140, 176, 0.2)";
+      ctx.strokeStyle = dec === 0
+        ? (usesWatchDial(state) ? "rgba(239, 104, 104, .9)" : "rgba(153, 173, 211, 0.35)")
+        : "rgba(119, 140, 176, 0.2)";
+      if (dec === 0 && usesWatchDial(state)) ctx.lineWidth = 0.7;
+      else ctx.lineWidth = 0.65;
       ctx.stroke();
     }
     ctx.restore();
@@ -253,20 +295,57 @@ export class SkyRenderer {
         ctx.lineTo(point.x, point.y);
       }
     }
-    ctx.strokeStyle = "rgba(242, 195, 108, 0.72)";
-    ctx.lineWidth = 1.05;
-    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = usesWatchDial(state) ? "rgba(242, 195, 108, .86)" : "rgba(242, 195, 108, 0.72)";
+    ctx.lineWidth = usesWatchDial(state) ? 1.4 : 1.05;
+    ctx.setLineDash(usesWatchDial(state) ? [] : [6, 6]);
     ctx.stroke();
     ctx.restore();
 
     const marker = this.projectHorizontal(eclipticToHorizontal(0, state.date, state.location.lat, state.location.lon), state);
     if (marker) {
       ctx.save();
-      ctx.fillStyle = "rgba(242, 195, 108, 0.78)";
+      ctx.fillStyle = usesWatchDial(state) ? "rgba(242,195,108,.9)" : "rgba(242, 195, 108, 0.78)";
       ctx.font = "9px Segoe UI, sans-serif";
       ctx.fillText("黄道", marker.x + 6, marker.y - 6);
       ctx.restore();
     }
+    if (usesWatchDial(state)) this.drawEclipticNumbers(ctx, state);
+  }
+
+  drawEclipticNumbers(ctx, state) {
+    const year = Number(BEIJING_YEAR_FORMATTER.format(state.date));
+    ctx.save();
+    ctx.font = "bold 9px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = "rgba(5, 16, 35, .96)";
+    ctx.fillStyle = "rgba(245, 214, 140, .96)";
+
+    for (let index = 0; index < 12; index += 1) {
+      const monthStart = new Date(Date.UTC(year, index, 1) - BEIJING_UTC_OFFSET_MS);
+      const longitude = solarLongitude(monthStart);
+      const projectLongitude = (value) => this.projectHorizontal(
+        eclipticToHorizontal(value, state.date, state.location.lat, state.location.lon),
+        state,
+      );
+      const before = projectLongitude(longitude - 1);
+      const point = projectLongitude(longitude);
+      const after = projectLongitude(longitude + 1);
+      if (!before || !point || !after) continue;
+
+      let rotation = Math.atan2(after.y - before.y, after.x - before.x);
+      if (Math.cos(rotation) < 0) rotation += Math.PI;
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(rotation);
+      ctx.strokeText(String(index + 1), 0, 0);
+      ctx.fillText(String(index + 1), 0, 0);
+      ctx.restore();
+    }
+
+    ctx.restore();
   }
 
   drawBoundaries(ctx, state) {
@@ -286,10 +365,10 @@ export class SkyRenderer {
 
   drawConstellationLines(ctx, state) {
     ctx.save();
-    ctx.strokeStyle = "rgba(121, 200, 210, 0.68)";
-    ctx.lineWidth = Math.max(0.7, 0.9 * state.zoom);
-    ctx.setLineDash([3, 4]);
-    ctx.lineCap = "round";
+    ctx.strokeStyle = usesWatchDial(state) ? "rgba(122, 199, 214, .41)" : "rgba(121, 200, 210, 0.68)";
+    ctx.lineWidth = usesWatchDial(state) ? 0.5 : Math.max(0.7, 0.9 * state.zoom);
+    ctx.setLineDash(usesWatchDial(state) ? [] : [3, 4]);
+    ctx.lineCap = usesWatchDial(state) ? "butt" : "round";
     for (const constellation of CONSTELLATIONS) {
       for (const line of constellation.lines) {
         ctx.beginPath();
@@ -345,39 +424,94 @@ export class SkyRenderer {
   }
 
   drawBodies(ctx, state) {
+    const sun = state.bodies?.find((body) => body.id === "sun");
+    const sunPoint = sun ? this.projectHorizontal(sun.horizontal, state) : null;
     for (const body of state.bodies ?? []) {
       const point = this.projectHorizontal(body.horizontal, state);
       if (!point) continue;
       const radius = body.size * Math.sqrt(state.zoom);
-      ctx.save();
-      ctx.fillStyle = body.color;
-      ctx.globalAlpha = body.id === "sun" ? 0.95 : 0.9;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, radius, 0, TAU);
-      ctx.fill();
-      if (body.id === "saturn") {
-        ctx.strokeStyle = "rgba(236, 214, 166, 0.8)";
-        ctx.lineWidth = 0.8;
+      if (body.id === "moon" && state.widgyMode) {
+        this.drawMoonPhase(ctx, point, body, sunPoint, radius);
+      } else {
+        ctx.save();
+        ctx.fillStyle = body.color;
+        ctx.globalAlpha = body.id === "sun" ? 0.95 : 0.9;
         ctx.beginPath();
-        ctx.ellipse(point.x, point.y, radius * 1.9, radius * 0.65, -0.25, 0, TAU);
-        ctx.stroke();
-      }
-      if (body.id === "moon" && body.illumination < 0.95) {
-        ctx.fillStyle = "rgba(7, 16, 38, 0.7)";
-        ctx.beginPath();
-        ctx.arc(point.x + radius * (1 - body.illumination * 2), point.y, radius * 0.92, 0, TAU);
+        ctx.arc(point.x, point.y, radius, 0, TAU);
         ctx.fill();
+        if (body.id === "saturn") {
+          ctx.strokeStyle = "rgba(236, 214, 166, 0.8)";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.ellipse(point.x, point.y, radius * 1.9, radius * 0.65, -0.25, 0, TAU);
+          ctx.stroke();
+        }
+        if (body.id === "moon" && body.illumination < 0.95) {
+          ctx.fillStyle = "rgba(7, 16, 38, 0.7)";
+          ctx.beginPath();
+          ctx.arc(point.x + radius * (1 - body.illumination * 2), point.y, radius * 0.92, 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
       }
-      ctx.globalAlpha = 1;
       if (state.layers.labels) {
+        ctx.save();
         ctx.fillStyle = body.color;
         ctx.font = "9px Segoe UI, sans-serif";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText(body.name, point.x + radius + 4, point.y - radius - 2);
+        ctx.restore();
       }
+    }
+  }
+
+  drawMoonPhase(ctx, point, moon, sunPoint, bodyRadius) {
+    const radius = bodyRadius * 1.35;
+    const illumination = clamp(moon.illumination, 0, 1);
+    const sunAngle = sunPoint
+      ? Math.atan2(sunPoint.y - point.y, sunPoint.x - point.x)
+      : 0;
+
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.translate(point.x, point.y);
+    ctx.fillStyle = "rgba(8,18,38,.96)";
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, TAU);
+    ctx.fill();
+
+    if (illumination >= .995) {
+      ctx.fillStyle = moon.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, TAU);
+      ctx.fill();
+    } else if (illumination > .005) {
+      const terminator = (1 - 2 * illumination) / (2 * Math.sqrt(illumination * (1 - illumination)));
+      ctx.save();
+      ctx.rotate(sunAngle);
+      ctx.beginPath();
+      for (let step = 0; step <= 32; step += 1) {
+        const y = -radius + (2 * radius * step) / 32;
+        const halfWidth = Math.sqrt(Math.max(0, radius * radius - y * y));
+        const x = clamp(terminator * halfWidth, -halfWidth, halfWidth);
+        if (step === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.arc(0, 0, radius, Math.PI / 2, -Math.PI / 2, true);
+      ctx.closePath();
+      ctx.fillStyle = moon.color;
+      ctx.fill();
       ctx.restore();
     }
+
+    ctx.strokeStyle = "rgba(216,231,255,.45)";
+    ctx.lineWidth = .7;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
   }
 
   drawConstellationLabels(ctx, state) {
@@ -388,7 +522,7 @@ export class SkyRenderer {
       for (const label of constellation.labels) {
         const point = this.projectEquatorial(label[0], label[1], state);
         if (!point) continue;
-        ctx.fillStyle = "rgba(216, 196, 142, 0.64)";
+        ctx.fillStyle = usesWatchDial(state) ? "rgba(122, 199, 214, .41)" : "rgba(216, 196, 142, 0.64)";
         ctx.fillText(constellation.name, point.x, point.y);
       }
     }
@@ -407,13 +541,98 @@ export class SkyRenderer {
       ["N", 0], ["E", 90], ["S", 180], ["W", 270],
     ];
     const labelRadius = state.widgetMode ? skyRadius - 20 : skyRadius + 20;
-    ctx.fillStyle = COLORS.ink;
+    ctx.fillStyle = usesWatchDial(state) ? "#ffffff" : COLORS.ink;
     ctx.font = "11px Segoe UI, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const [label, azimuth] of cardinal) {
       const angle = azimuth * DEG;
-      ctx.fillText(label, center.x + Math.sin(angle) * labelRadius, center.y - Math.cos(angle) * labelRadius);
+      const eastWestDirection = usesWatchDial(state) ? -1 : 1;
+      ctx.fillText(label, center.x + eastWestDirection * Math.sin(angle) * labelRadius, center.y - Math.cos(angle) * labelRadius);
+    }
+    ctx.restore();
+  }
+
+  drawSolarTermRing(ctx, center, skyRadius, state) {
+    const termBandWidth = 16;
+    const termMidRadius = skyRadius + termBandWidth / 2 + 1;
+    const termOuterRadius = skyRadius + termBandWidth + 1;
+    const currentTerm = Math.floor(solarLongitude(state.date) / 15) % SOLAR_TERMS.length;
+    const angleForLongitude = (longitude) => {
+      const horizontal = eclipticToHorizontal(longitude, state.date, state.location.lat, state.location.lon);
+      const azimuth = horizontal.azimuth * DEG;
+      return usesWatchDial(state) ? -azimuth - Math.PI / 2 : azimuth - Math.PI / 2;
+    };
+    const ringPoint = (longitude) => {
+      const angle = angleForLongitude(longitude);
+      return {
+        x: center.x + Math.cos(angle) * termMidRadius,
+        y: center.y + Math.sin(angle) * termMidRadius,
+      };
+    };
+
+    ctx.save();
+    ctx.lineCap = "butt";
+    ctx.strokeStyle = "rgba(12,28,56,.92)";
+    ctx.lineWidth = termBandWidth;
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, termMidRadius, 0, TAU);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(218,182,112,.72)";
+    ctx.lineWidth = .6;
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, skyRadius + 1.35, 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(218,182,112,.5)";
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, termOuterRadius - .35, 0, TAU);
+    ctx.stroke();
+
+    for (let index = 0; index < SOLAR_TERMS.length; index += 1) {
+      const term = SOLAR_TERMS[index];
+      const middleLongitude = (term.longitude + 7.5) % 360;
+      const angle = angleForLongitude(term.longitude);
+      const middleAngle = angleForLongitude(middleLongitude);
+
+      if (index === currentTerm) {
+        ctx.strokeStyle = "rgba(245,214,140,.36)";
+        ctx.lineWidth = termBandWidth - 1;
+        ctx.beginPath();
+        for (let step = 0; step <= 30; step += 1) {
+          const point = ringPoint(term.longitude + step / 2);
+          if (step === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(218,182,112,.48)";
+      ctx.lineWidth = .55;
+      ctx.beginPath();
+      ctx.moveTo(
+        center.x + Math.cos(angle) * (skyRadius + 1.3),
+        center.y + Math.sin(angle) * (skyRadius + 1.3),
+      );
+      ctx.lineTo(
+        center.x + Math.cos(angle) * (termOuterRadius - .3),
+        center.y + Math.sin(angle) * (termOuterRadius - .3),
+      );
+      ctx.stroke();
+
+      const labelX = center.x + Math.cos(middleAngle) * termMidRadius;
+      const labelY = center.y + Math.sin(middleAngle) * termMidRadius;
+      ctx.save();
+      ctx.translate(labelX, labelY);
+      let rotation = middleAngle + Math.PI / 2;
+      if (Math.sin(middleAngle) > 0) rotation += Math.PI;
+      ctx.rotate(rotation);
+      ctx.fillStyle = index === currentTerm ? COLORS.gold : "rgba(210,220,235,.82)";
+      ctx.font = "11px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(term.name, 0, 0);
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -421,8 +640,8 @@ export class SkyRenderer {
   ringLayout(skyRadius, state) {
     const compact = state.widgetMode;
     return {
-      time: skyRadius + (compact ? 4 : 38),
-      timeOuter: skyRadius + (compact ? 12 : 46),
+      time: skyRadius + (compact ? (usesWatchDial(state) ? 23 : 4) : 38),
+      timeOuter: skyRadius + (compact ? (usesWatchDial(state) ? 27 : 12) : 46),
     };
   }
 
@@ -448,7 +667,7 @@ export class SkyRenderer {
     };
     ctx.save();
     ctx.lineCap = "butt";
-    ctx.lineWidth = 10;
+    ctx.lineWidth = usesWatchDial(state) ? 8 : 10;
     ctx.strokeStyle = colors.night;
     ctx.beginPath();
     ctx.arc(center.x, center.y, time, 0, TAU);
@@ -501,12 +720,36 @@ export class SkyRenderer {
 
     const fraction = state.timeRing?.timeFraction ?? localClockFraction(state.date);
     const markerAngle = -Math.PI / 2 + fraction * TAU;
-    ctx.strokeStyle = COLORS.gold;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(center.x + Math.cos(markerAngle) * (time - 6), center.y + Math.sin(markerAngle) * (time - 6));
-    ctx.lineTo(center.x + Math.cos(markerAngle) * (timeOuter + 7), center.y + Math.sin(markerAngle) * (timeOuter + 7));
-    ctx.stroke();
+    if (usesWatchDial(state)) {
+      const markerX = center.x + Math.cos(markerAngle) * time;
+      const markerY = center.y + Math.sin(markerAngle) * time;
+      ctx.save();
+      ctx.translate(markerX, markerY);
+      ctx.strokeStyle = "#ff625f";
+      ctx.fillStyle = "#ff292f";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.shadowColor = "rgba(255, 35, 48, .95)";
+      ctx.shadowBlur = 5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.5, 0, TAU);
+      ctx.fill();
+      for (let ray = 0; ray < 8; ray += 1) {
+        const angle = ray * TAU / 8;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(angle) * 3.8, Math.sin(angle) * 3.8);
+        ctx.lineTo(Math.cos(angle) * 6.4, Math.sin(angle) * 6.4);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else {
+      ctx.strokeStyle = COLORS.gold;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(center.x + Math.cos(markerAngle) * (time - 6), center.y + Math.sin(markerAngle) * (time - 6));
+      ctx.lineTo(center.x + Math.cos(markerAngle) * (timeOuter + 7), center.y + Math.sin(markerAngle) * (timeOuter + 7));
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

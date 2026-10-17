@@ -5,7 +5,7 @@ import {
   planetaryBodies,
   solarAltitude,
 } from "./astro.js";
-import { SkyRenderer } from "./renderer.js";
+import { SkyRenderer } from "./renderer.js?v=20261017.2";
 
 const DEFAULT_LOCATION = {
   lat: 31.2,
@@ -29,6 +29,8 @@ const state = {
   location: loadLocation() ?? { ...DEFAULT_LOCATION },
   timeRing: null,
   bodies: [],
+  homepageMode: document.body.dataset.homepage === "true",
+  widgyMode: document.body.dataset.widget === "true",
   layers: {
     stars: true,
     constellations: true,

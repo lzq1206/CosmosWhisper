@@ -327,6 +327,13 @@ function drawBodies() {
     const point = projectOfDate(body.ra, body.dec); if (!point) continue;
     if (body.id === "moon") drawMoonPhase(point, body, sunPoint);
     else { ctx.fillStyle = body.color; ctx.beginPath(); ctx.arc(point.x, point.y, body.size, 0, TAU); ctx.fill(); }
+    if (body.id === "saturn") {
+      ctx.strokeStyle = "rgba(236, 214, 166, 0.8)";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(point.x, point.y, body.size * 1.9, body.size * 0.65, -0.25, 0, TAU);
+      ctx.stroke();
+    }
     ctx.fillStyle = body.color; ctx.font = "9px Segoe UI,sans-serif"; ctx.fillText(body.name, point.x + body.size + 3, point.y - body.size - 2);
   }
 }
