@@ -53,7 +53,7 @@ function resize() {
   canvas.height = Math.round(rect.height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const edge = Math.min(rect.width, rect.height);
-  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: Math.max(1, edge / 2 - 21) };
+  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: Math.max(1, edge / 2 - 26) };
   return true;
 }
 
@@ -363,7 +363,7 @@ function drawCompassDirections() {
 
 function drawTimeRing() {
   const { cx, cy, radius } = metrics;
-  const time = radius + 13;
+  const time = radius + 18;
   const timeOuter = time + 4;
   const colors = {
     day: "#f4f1df",
@@ -451,7 +451,7 @@ function drawTimeRing() {
 function drawSolarTermRing() {
   const { cx, cy, radius } = metrics;
   const lst = localSiderealHours(state.date, city.lon);
-  const termBandWidth = 6;
+  const termBandWidth = 12;
   const termMidRadius = radius + termBandWidth / 2 + 1;
   const termOuterRadius = radius + termBandWidth + 1;
   const currentTerm = Math.floor(solarLongitude(state.date) / 15) % SOLAR_TERMS.length;
@@ -511,7 +511,7 @@ function drawSolarTermRing() {
     if (Math.sin(middleAngle) > 0) rotation += Math.PI;
     ctx.rotate(rotation);
     ctx.fillStyle = index === currentTerm ? COLORS.goldBright : "rgba(210,220,235,.82)";
-    ctx.font = "8px Segoe UI,sans-serif";
+    ctx.font = "10px Segoe UI,sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(term.name, 0, 0);
