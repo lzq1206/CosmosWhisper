@@ -1,0 +1,21 @@
+{
+  "formatVersion": 2,
+  "id": "com.lzq1206.cosmoswhisper.active-planisphere",
+  "name": "CosmosWhisper · 活动星盘",
+  "version": "1.0.0",
+  "runtimeVersion": "1.0",
+  "entry": "main.jsx",
+  "supportedFamilies": [
+    "systemSmall",
+    "systemMedium",
+    "systemLarge"
+  ],
+  "permissions": [],
+  "networkDomains": [],
+  "description": "上海活动星盘快照，中央时针、分针与扫秒秒针。",
+  "author": {
+    "name": "lzq1206",
+    "url": "https://github.com/lzq1206/CosmosWhisper"
+  },
+  "license": "MIT"
+}

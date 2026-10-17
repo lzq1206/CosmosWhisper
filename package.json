@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate:beijing-widgy": "node scripts/generate-beijing-widgy.mjs"
+    "generate:beijing-widgy": "node scripts/generate-beijing-widgy.mjs",
+    "generate:scriptwidget": "node scripts/generate-scriptwidget-packages.mjs"
   },
   "dependencies": {
     "sharp": "^0.33.5"
