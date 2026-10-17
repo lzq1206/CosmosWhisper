@@ -42,7 +42,7 @@ const COLORS = {
   gold: "#dcb870",
   goldBright: "#f5d68c",
   line: "rgba(122, 199, 214, .82)",
-  boundary: "rgba(7, 25, 52, .68)",
+  boundary: "rgba(143, 168, 203, .62)",
 };
 
 function resize() {
@@ -53,7 +53,7 @@ function resize() {
   canvas.height = Math.round(rect.height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const edge = Math.min(rect.width, rect.height);
-  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: Math.max(1, edge / 2 - 32) };
+  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: Math.max(1, edge / 2 - 21) };
   return true;
 }
 
@@ -294,13 +294,19 @@ function drawBodies() {
 function drawConstellationLabels() {
   ctx.save();
   ctx.fillStyle = COLORS.boundary;
-  ctx.font = "10px Segoe UI,sans-serif";
+  ctx.font = "8px Segoe UI,sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = .8;
+  ctx.strokeStyle = "rgba(3,8,23,.66)";
   for (const constellation of CONSTELLATIONS) {
     for (const [ra, dec] of constellation.labels) {
       const point = projectEquatorial(ra, dec);
-      if (point) ctx.fillText(constellation.name, point.x, point.y);
+      if (point) {
+        ctx.strokeText(constellation.name, point.x, point.y);
+        ctx.fillText(constellation.name, point.x, point.y);
+      }
     }
   }
   ctx.restore();
@@ -360,8 +366,8 @@ function drawCompassDirections() {
 
 function drawTimeRing() {
   const { cx, cy, radius } = metrics;
-  const time = radius + 16;
-  const timeOuter = radius + 24;
+  const time = radius + 13;
+  const timeOuter = time + 4;
   const colors = {
     day: "#f4f1df",
     standard: "#f6e2b4",
@@ -382,7 +388,7 @@ function drawTimeRing() {
 
   ctx.save();
   ctx.lineCap = "butt";
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 8;
   ctx.strokeStyle = colors.night;
   ctx.beginPath();
   ctx.arc(cx, cy, time, 0, TAU);
@@ -413,13 +419,15 @@ function drawTimeRing() {
   for (let index = 0; index < 96; index += 1) {
     const fraction = index / 96;
     const angle = -Math.PI / 2 + fraction * TAU;
-    const length = index % 4 === 0 ? 8 : index % 2 === 0 ? 5 : 3;
-    const inner = timeOuter - length;
+    const length = index % 4 === 0 ? 4 : index % 2 === 0 ? 3 : 2;
+    const tickWidth = index % 4 === 0 ? 1 : .7;
+    const outerTickRadius = timeOuter - tickWidth / 2;
+    const inner = outerTickRadius - length;
     ctx.strokeStyle = index % 4 === 0 ? "rgba(240,238,229,.78)" : "rgba(137,147,171,.6)";
-    ctx.lineWidth = index % 4 === 0 ? 1 : .7;
+    ctx.lineWidth = tickWidth;
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
-    ctx.lineTo(cx + Math.cos(angle) * timeOuter, cy + Math.sin(angle) * timeOuter);
+    ctx.lineTo(cx + Math.cos(angle) * outerTickRadius, cy + Math.sin(angle) * outerTickRadius);
     ctx.stroke();
   }
 
@@ -435,10 +443,10 @@ function drawTimeRing() {
 
   const markerAngle = -Math.PI / 2 + state.timeRing.timeFraction * TAU;
   ctx.strokeStyle = "#f2c36c";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(cx + Math.cos(markerAngle) * (time - 6), cy + Math.sin(markerAngle) * (time - 6));
-  ctx.lineTo(cx + Math.cos(markerAngle) * (timeOuter + 7), cy + Math.sin(markerAngle) * (timeOuter + 7));
+  ctx.moveTo(cx + Math.cos(markerAngle) * (time - 3.2), cy + Math.sin(markerAngle) * (time - 3.2));
+  ctx.lineTo(cx + Math.cos(markerAngle) * (time + 3.2), cy + Math.sin(markerAngle) * (time + 3.2));
   ctx.stroke();
   ctx.restore();
 }
@@ -446,7 +454,7 @@ function drawTimeRing() {
 function drawSolarTermRing() {
   const { cx, cy, radius } = metrics;
   const lst = localSiderealHours(state.date, city.lon);
-  const termBandWidth = 8;
+  const termBandWidth = 6;
   const termMidRadius = radius + termBandWidth / 2 + 1;
   const termOuterRadius = radius + termBandWidth + 1;
   const currentTerm = Math.floor(solarLongitude(state.date) / 15) % SOLAR_TERMS.length;
@@ -462,13 +470,14 @@ function drawSolarTermRing() {
   ctx.stroke();
 
   ctx.strokeStyle = "rgba(218,182,112,.72)";
-  ctx.lineWidth = 1;
+  ctx.lineWidth = .6;
   ctx.beginPath();
-  ctx.arc(cx, cy, radius + 1, 0, TAU);
+  ctx.arc(cx, cy, radius + 1.35, 0, TAU);
   ctx.stroke();
+  ctx.lineWidth = .6;
   ctx.strokeStyle = "rgba(218,182,112,.5)";
   ctx.beginPath();
-  ctx.arc(cx, cy, termOuterRadius, 0, TAU);
+  ctx.arc(cx, cy, termOuterRadius - .35, 0, TAU);
   ctx.stroke();
 
   for (let index = 0; index < SOLAR_TERMS.length; index += 1) {
@@ -491,10 +500,10 @@ function drawSolarTermRing() {
     }
 
     ctx.strokeStyle = "rgba(218,182,112,.48)";
-    ctx.lineWidth = .75;
+    ctx.lineWidth = .55;
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(angle) * (radius + 1), cy + Math.sin(angle) * (radius + 1));
-    ctx.lineTo(cx + Math.cos(angle) * termOuterRadius, cy + Math.sin(angle) * termOuterRadius);
+    ctx.moveTo(cx + Math.cos(angle) * (radius + 1.3), cy + Math.sin(angle) * (radius + 1.3));
+    ctx.lineTo(cx + Math.cos(angle) * (termOuterRadius - .3), cy + Math.sin(angle) * (termOuterRadius - .3));
     ctx.stroke();
 
     const labelX = cx + Math.cos(middleAngle) * termMidRadius;
@@ -514,18 +523,18 @@ function drawSolarTermRing() {
 
   const sun = solarEquatorial(state.date);
   const sunAngle = angleForRightAscension(sun.ra);
-  const needleTipRadius = termOuterRadius + 2;
+  const needleTipRadius = termMidRadius + 1.8;
   const tipX = cx + Math.cos(sunAngle) * needleTipRadius;
   const tipY = cy + Math.sin(sunAngle) * needleTipRadius;
   ctx.strokeStyle = COLORS.goldBright;
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(cx + Math.cos(sunAngle) * (radius + 1), cy + Math.sin(sunAngle) * (radius + 1));
+  ctx.moveTo(cx + Math.cos(sunAngle) * (radius + 1.6), cy + Math.sin(sunAngle) * (radius + 1.6));
   ctx.lineTo(tipX, tipY);
   ctx.stroke();
   ctx.fillStyle = COLORS.goldBright;
   ctx.beginPath();
-  ctx.arc(tipX, tipY, 2, 0, TAU);
+  ctx.arc(tipX, tipY, 1.1, 0, TAU);
   ctx.fill();
   ctx.restore();
 }
