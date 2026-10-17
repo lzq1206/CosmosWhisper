@@ -5,7 +5,7 @@ import {
   planetaryBodies,
   solarAltitude,
 } from "./astro.js";
-import { SkyRenderer } from "./renderer.js?v=20261017.3";
+import { SkyRenderer } from "./renderer.js?v=20261017.4";
 
 const DEFAULT_LOCATION = {
   lat: 31.2,

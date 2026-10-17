@@ -727,6 +727,27 @@ export class SkyRenderer {
         const distance = state.widgetMode ? timeOuter - 1 : timeOuter + 5;
         ctx.fillText(label, center.x + Math.cos(angle) * distance, center.y + Math.sin(angle) * distance);
       }
+    } else {
+      ctx.save();
+      ctx.font = "6px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = "rgba(3, 8, 23, .96)";
+      ctx.fillStyle = "rgba(246, 227, 187, .98)";
+      for (const [label, fraction] of [["0h", 0], ["6h", 0.25], ["12h", 0.5], ["18h", 0.75]]) {
+        const angle = -Math.PI / 2 + fraction * TAU;
+        let rotation = angle + Math.PI / 2;
+        if (Math.cos(rotation) < 0) rotation += Math.PI;
+        ctx.save();
+        ctx.translate(center.x + Math.cos(angle) * time, center.y + Math.sin(angle) * time);
+        ctx.rotate(rotation);
+        ctx.strokeText(label, 0, 0);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+      ctx.restore();
     }
 
     const fraction = state.timeRing?.timeFraction ?? localClockFraction(state.date);
