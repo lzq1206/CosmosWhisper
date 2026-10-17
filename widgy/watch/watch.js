@@ -219,7 +219,10 @@ function drawEclipticNumbers() {
   ctx.fillStyle = "rgba(245, 214, 140, .96)";
 
   for (let index = 0; index < 12; index += 1) {
-    const longitude = index * 30 + 15;
+    const monthStart = new Date(state.date.getFullYear(), index, 1, 12);
+    const nextMonthStart = new Date(state.date.getFullYear(), index + 1, 1, 12);
+    const monthMidpoint = new Date((monthStart.getTime() + nextMonthStart.getTime()) / 2);
+    const longitude = solarLongitude(monthMidpoint);
     const beforeCoordinates = eclipticToEquatorial(longitude - 1, state.date);
     const coordinates = eclipticToEquatorial(longitude, state.date);
     const afterCoordinates = eclipticToEquatorial(longitude + 1, state.date);
