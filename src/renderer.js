@@ -55,6 +55,25 @@ function solarLongitude(date) {
 }
 
 const visibleAltitude = (altitude) => altitude >= -0.7;
+const GALACTIC_POLES = [
+  [192.8595 / 15, 27.1283],
+  [12.8595 / 15, -27.1283],
+];
+
+function pointInEvenOddRings(rings, point) {
+  let inside = false;
+  for (const ring of rings) {
+    for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index, index += 1) {
+      const first = ring[index];
+      const second = ring[previous];
+      if ((first.y > point.y) !== (second.y > point.y)
+        && point.x < ((second.x - first.x) * (point.y - first.y)) / (second.y - first.y) + first.x) {
+        inside = !inside;
+      }
+    }
+  }
+  return inside;
+}
 
 function pathFromEquatorial(ctx, points, project) {
   let started = false;
@@ -228,10 +247,36 @@ export class SkyRenderer {
   }
 
   drawMilkyWay(ctx, state) {
+    const { centerX, centerY, baseRadius } = this.metrics;
+    const skyRadius = baseRadius * state.zoom;
+    const projectedRings = MILKY_WAY_RINGS.map((ring) => ring
+      .map(([ra, dec]) => this.projectEquatorialUnclipped(ra, dec, state))
+      .filter(Boolean));
+
+    // The galactic poles sit well outside the Milky Way band. If the projected
+    // rings contain the visible pole, the closed curves have wrapped around
+    // the azimuthal projection's antipode and Canvas has selected the opposite
+    // side of the spherical outline.
+    const visibleGalacticPole = GALACTIC_POLES
+      .map(([ra, dec]) => this.projectEquatorialUnclipped(ra, dec, state))
+      .filter((point) => point && Math.hypot(point.x - centerX, point.y - centerY) <= skyRadius + 0.5)
+      .sort((first, second) => Math.hypot(first.x - centerX, first.y - centerY)
+        - Math.hypot(second.x - centerX, second.y - centerY))[0];
+    const invertFill = visibleGalacticPole
+      ? pointInEvenOddRings(projectedRings, visibleGalacticPole)
+      : false;
+
     ctx.save();
     ctx.beginPath();
-    for (const ring of MILKY_WAY_RINGS) {
-      pathFromEquatorial(ctx, ring, (ra, dec) => this.projectEquatorialUnclipped(ra, dec, state));
+    if (invertFill) {
+      ctx.arc(centerX, centerY, skyRadius, 0, TAU);
+    }
+    for (const ring of projectedRings) {
+      if (!ring.length) continue;
+      ctx.moveTo(ring[0].x, ring[0].y);
+      for (let index = 1; index < ring.length; index += 1) {
+        ctx.lineTo(ring[index].x, ring[index].y);
+      }
     }
     ctx.fillStyle = "rgba(255, 255, 255, 0.11)";
     ctx.fill("evenodd");
