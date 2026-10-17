@@ -26,8 +26,8 @@ const COLORS = {
   muted: "#9ba9bf",
   gold: "#dcb870",
   goldBright: "#f5d68c",
-  line: "rgba(122, 199, 214, .62)",
-  boundary: "rgba(220, 157, 166, .28)",
+  line: "rgba(122, 199, 214, .82)",
+  boundary: "rgba(220, 157, 166, .48)",
 };
 
 function resize() {
