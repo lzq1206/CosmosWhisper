@@ -45,6 +45,7 @@ const COLORS = {
   goldBright: "#f5d68c",
   line: "rgba(122, 199, 214, .41)",
   boundary: "rgba(143, 168, 203, .4)",
+  horizontalGrid: "rgba(106, 132, 172, .46)",
 };
 
 function resize() {
@@ -347,16 +348,25 @@ function drawConstellationLabels() {
   ctx.restore();
 }
 
-function horizonEquatorialAtAzimuth(azimuthDegrees, lst) {
+function horizontalEquatorialAt(azimuthDegrees, altitudeDegrees, lst) {
   const latitude = city.lat * DEG;
   const azimuth = azimuthDegrees * DEG;
-  const sinDec = Math.cos(latitude) * Math.cos(azimuth);
+  const altitude = altitudeDegrees * DEG;
+  const sinDec = Math.sin(latitude) * Math.sin(altitude)
+    + Math.cos(latitude) * Math.cos(altitude) * Math.cos(azimuth);
   const dec = Math.asin(clamp(sinDec, -1, 1)) / DEG;
   const cosDec = Math.max(.000001, Math.cos(dec * DEG));
-  const sinHourAngle = -Math.sin(azimuth) / cosDec;
-  const cosHourAngle = -Math.sin(latitude) * Math.cos(azimuth) / cosDec;
+  const sinHourAngle = -Math.cos(altitude) * Math.sin(azimuth) / cosDec;
+  const cosHourAngle = (
+    Math.sin(altitude) * Math.cos(latitude)
+    - Math.cos(altitude) * Math.cos(azimuth) * Math.sin(latitude)
+  ) / cosDec;
   const hourAngle = Math.atan2(sinHourAngle, cosHourAngle) / DEG / 15;
   return [lst - hourAngle, dec];
+}
+
+function horizonEquatorialAtAzimuth(azimuthDegrees, lst) {
+  return horizontalEquatorialAt(azimuthDegrees, 0, lst);
 }
 
 function horizonEquatorialPath() {
@@ -364,6 +374,38 @@ function horizonEquatorialPath() {
   const lst = localSiderealHours(state.date, city.lon);
   for (let index = 0; index <= 360; index += 1) points.push(horizonEquatorialAtAzimuth(index, lst));
   return points;
+}
+
+function drawHorizontalGrid() {
+  const lst = localSiderealHours(state.date, city.lon);
+  ctx.save();
+  ctx.beginPath();
+  drawPath(horizonEquatorialPath(), projectOfDate, true);
+  ctx.clip();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = COLORS.horizontalGrid;
+  ctx.lineWidth = .4;
+
+  for (let altitude = 15; altitude < 90; altitude += 15) {
+    const points = [];
+    for (let azimuth = 0; azimuth <= 360; azimuth += 2) {
+      points.push(horizontalEquatorialAt(azimuth, altitude, lst));
+    }
+    ctx.beginPath();
+    drawPath(points, projectOfDate, true);
+    ctx.stroke();
+  }
+
+  for (let azimuth = 0; azimuth < 360; azimuth += 15) {
+    const points = [];
+    for (let altitude = 0; altitude <= 90; altitude += 1) {
+      points.push(horizontalEquatorialAt(azimuth, altitude, lst));
+    }
+    ctx.beginPath();
+    drawPath(points, projectOfDate);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawHorizonBoundary() {
@@ -382,7 +424,7 @@ function drawCompassDirections() {
   ctx.lineJoin = "round";
   ctx.lineWidth = 3.5;
   ctx.strokeStyle = "rgba(3,8,23,.96)";
-  ctx.fillStyle = COLORS.goldBright;
+  ctx.fillStyle = "#ffffff";
   const lst = localSiderealHours(state.date, city.lon);
   const directions = [
     ["北", 0, 12], ["东北", 45, 10], ["东", 90, 12], ["东南", 135, 10],
@@ -610,7 +652,7 @@ function render() {
   ctx.clearRect(0, 0, metrics.width, metrics.height);
   drawBackground();
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
-  drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies(); drawEclipticNumbers(); drawConstellationLabels();
+  drawGalaxy(); drawGrid(); drawHorizontalGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies(); drawEclipticNumbers(); drawConstellationLabels();
   ctx.restore();
   drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawSolarTermRing(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
