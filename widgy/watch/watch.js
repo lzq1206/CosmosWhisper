@@ -182,13 +182,14 @@ function drawGrid() {
 
 function drawAuxiliaryPlanes() {
   ctx.save();
-  ctx.setLineDash([7, 6]);
-  ctx.lineWidth = 1.4;
-  ctx.strokeStyle = "rgba(244, 238, 209, .68)";
+  ctx.setLineDash([]);
+  ctx.lineWidth = .7;
+  ctx.strokeStyle = "rgba(239, 104, 104, .9)";
   const equator = [];
   for (let ra = 0; ra <= 24; ra += .25) equator.push([ra, 0]);
   ctx.beginPath(); drawPath(equator, projectEquatorial); ctx.stroke();
 
+  ctx.lineWidth = 1.4;
   ctx.strokeStyle = "rgba(242, 195, 108, .86)";
   const ecliptic = [];
   for (let longitude = 0; longitude <= 360; longitude += 2) {
@@ -196,7 +197,6 @@ function drawAuxiliaryPlanes() {
     ecliptic.push([coordinates.ra, coordinates.dec]);
   }
   ctx.beginPath(); drawPath(ecliptic, projectOfDate); ctx.stroke();
-  ctx.setLineDash([]);
 
   ctx.font = "10px Segoe UI,sans-serif";
   ctx.fillStyle = "rgba(244,238,209,.85)";
@@ -205,6 +205,39 @@ function drawAuxiliaryPlanes() {
   ctx.fillStyle = "rgba(242,195,108,.9)";
   const eclipticLabel = projectOfDate(6, 0);
   if (eclipticLabel) ctx.fillText("黄道", eclipticLabel.x + 5, eclipticLabel.y + 12);
+  ctx.restore();
+}
+
+function drawEclipticNumbers() {
+  ctx.save();
+  ctx.font = "bold 9px Segoe UI,sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = "rgba(5, 16, 35, .96)";
+  ctx.fillStyle = "rgba(245, 214, 140, .96)";
+
+  for (let index = 0; index < 12; index += 1) {
+    const longitude = index * 30 + 15;
+    const beforeCoordinates = eclipticToEquatorial(longitude - 1, state.date);
+    const coordinates = eclipticToEquatorial(longitude, state.date);
+    const afterCoordinates = eclipticToEquatorial(longitude + 1, state.date);
+    const before = projectOfDate(beforeCoordinates.ra, beforeCoordinates.dec);
+    const point = projectOfDate(coordinates.ra, coordinates.dec);
+    const after = projectOfDate(afterCoordinates.ra, afterCoordinates.dec);
+    if (!before || !point || !after) continue;
+
+    let rotation = Math.atan2(after.y - before.y, after.x - before.x);
+    if (Math.cos(rotation) < 0) rotation += Math.PI;
+    ctx.save();
+    ctx.translate(point.x, point.y);
+    ctx.rotate(rotation);
+    ctx.strokeText(String(index + 1), 0, 0);
+    ctx.fillText(String(index + 1), 0, 0);
+    ctx.restore();
+  }
+
   ctx.restore();
 }
 
@@ -331,7 +364,7 @@ function horizonEquatorialPath() {
 function drawHorizonBoundary() {
   const horizon = horizonEquatorialPath();
   ctx.save();
-  ctx.strokeStyle = "rgba(245,214,140,.7)";
+  ctx.strokeStyle = "rgba(245,245,245,.88)";
   ctx.lineWidth = 1.5;
   ctx.beginPath(); drawPath(horizon, projectOfDate, true); ctx.stroke();
   ctx.restore();
@@ -572,7 +605,7 @@ function render() {
   ctx.clearRect(0, 0, metrics.width, metrics.height);
   drawBackground();
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
-  drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies(); drawConstellationLabels();
+  drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies(); drawEclipticNumbers(); drawConstellationLabels();
   ctx.restore();
   drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawSolarTermRing(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
