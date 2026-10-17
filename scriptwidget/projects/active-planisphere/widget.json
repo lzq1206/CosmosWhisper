@@ -2,31 +2,31 @@
   "formatVersion": 2,
   "id": "com.lzq1206.cosmoswhisper.active-planisphere",
   "name": "CosmosWhisper · 活动星盘",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
   "supportedFamilies": [
     "systemSmall",
     "systemMedium",
-    "systemLarge",
-    "accessoryCircular",
-    "accessoryRectangular",
-    "accessoryInline"
+    "systemLarge"
   ],
   "permissions": [
-    "location"
+    "location",
+    "network"
   ],
-  "networkDomains": [],
+  "networkDomains": [
+    "raw.githubusercontent.com"
+  ],
   "plugins": [],
-  "description": "网页 Watch 风格的当前位置旋转活动星盘。",
+  "description": "网页 Watch 风格的城市活动星盘与动态指针。",
   "category": "Astronomy",
   "tags": [
     "astronomy",
     "planisphere",
-    "local-location",
+    "nearest-city",
     "moon-phase",
     "solar-terms",
-    "web-style"
+    "web-snapshot"
   ],
   "author": {
     "name": "lzq1206",

@@ -2,31 +2,31 @@
   "formatVersion": 2,
   "id": "com.lzq1206.cosmoswhisper.visible-sky",
   "name": "CosmosWhisper · 可见天区",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
   "supportedFamilies": [
     "systemSmall",
     "systemMedium",
-    "systemLarge",
-    "accessoryCircular",
-    "accessoryRectangular",
-    "accessoryInline"
+    "systemLarge"
   ],
   "permissions": [
-    "location"
+    "location",
+    "network"
   ],
-  "networkDomains": [],
+  "networkDomains": [
+    "raw.githubusercontent.com"
+  ],
   "plugins": [],
-  "description": "网页首页风格的当前位置可见天区星图。",
+  "description": "网页首页风格的城市可见天区星图与动态指针。",
   "category": "Astronomy",
   "tags": [
     "astronomy",
     "planisphere",
-    "local-location",
+    "nearest-city",
     "moon-phase",
     "solar-terms",
-    "web-style"
+    "web-snapshot"
   ],
   "author": {
     "name": "lzq1206",

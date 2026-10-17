@@ -1,10 +1,10 @@
 # ScriptWidget packages
 
-- `exports/visible-sky.swt` — 可见天区版
-- `exports/active-planisphere.swt` — 活动星盘版
+- exports/visible-sky.swt — 可见天区版
+- exports/active-planisphere.swt — 活动星盘版
 
-可见天区版沿用网页首页投影，活动星盘版沿用网页 Watch 极轴投影；两者使用相应网页样式、配色与外圈。组件中的圆盘接近方形边缘，比例参考你提供的截图。它们按设备坐标与本地时间重新计算，不使用北京静态底图，也不向外发送定位；中心三针随尺寸缩放，秒针使用 ScriptWidget 原生时钟动画。
+星盘底图直接使用对应网页城市页面的截图。GitHub Actions 在页面画布加载后等待 5 秒，并每 15 分钟更新每个城市的可见天区和 Watch 星盘图片。小组件按设备定位选择最近城市，只额外绘制中央三针；针的旋转容器与整个圆盘同尺寸，因此旋转锚点固定在中心。
 
-星盘与天体按 WidgetKit 刷新时重新计算。首次使用前，请在 ScriptWidget 中授权定位并刷新定位缓存。当地城市名优先使用设备提供的地名，缺失时从内置城市表匹配附近城市。
+导入时需要允许 ScriptWidget 访问定位和 raw.githubusercontent.com 网络图片。截图发布计划为每 15 分钟一次，WidgetKit 对组件本身的刷新由 ScriptWidget 和系统调度，不保证严格每 15 分钟显示刷新。
 
-用 `npm run generate:scriptwidget` 重新生成。通过 iOS 分享菜单导入 `.swt` 文件并选择 ScriptWidget。
+用 npm run generate:scriptwidget 重新生成两个项目目录和 SWT 文件。也可以把 projects/visible-sky 或 projects/active-planisphere 作为文件夹放进 ScriptWidget Scripts 目录。

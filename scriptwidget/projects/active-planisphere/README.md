@@ -1,7 +1,9 @@
 # CosmosWhisper · 活动星盘
 
-活动星盘版沿用 CosmosWhisper 网页 Watch 的极轴旋转投影和蓝金配色。星空、银河与星座线打包为可旋转底图，星名、方位和天体标注由程序按设备位置与本地时间定位显示；外圈保留二十四节气和日照信息。
+活动星盘版以 CosmosWhisper Watch 城市页面截图作为完整底图，按设备位置选择最近城市，并在表盘中心叠加动态时针、分针和秒针。
 
-圆盘按你提供截图中的近满幅方形占比制作，中央时针、分针和扫秒针随组件大小缩放。组件用设备坐标计算天空；系统未提供城市名时，从内置城市表匹配附近城市，不请求外部定位服务。
+截图在网页画布加载后等待 5 秒再生成，GitHub Actions 每 15 分钟更新一次城市图片。小组件只叠加三根以表盘中心为旋转轴的指针，秒针使用 ScriptWidget 的原生时钟动画。
 
-导入文件：`scriptwidget/exports/active-planisphere.swt`
+小组件需要定位和网络权限。定位结果会匹配仓库内最近的城市页面；网络权限用于读取该城市的截图。系统实际刷新小组件的时间由 ScriptWidget 和 WidgetKit 管理。
+
+导入文件：scriptwidget/exports/active-planisphere.swt
