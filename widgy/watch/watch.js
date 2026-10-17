@@ -1,4 +1,4 @@
-import { DEG, TAU, clamp, equatorialOfDateToHorizontal, equatorialToHorizontal, localSiderealHours, planetaryBodies } from "../../src/astro.js";
+import { DEG, TAU, clamp, eclipticToEquatorial, equatorialOfDateToHorizontal, equatorialToHorizontal, localSiderealHours, planetaryBodies } from "../../src/astro.js";
 import { CONSTELLATIONS } from "../../src/data/constellations.js";
 import { MILKY_WAY_RINGS } from "../../src/data/milkyWay.js";
 import { STARS } from "../../src/data/stars.js";
@@ -10,6 +10,7 @@ const cityId = new URLSearchParams(window.location.search).get("city") || "beiji
 const city = CITY_BY_ID.get(cityId) || CITY_BY_ID.get("beijing");
 const ctx = canvas.getContext("2d");
 const state = { date: new Date(), latitudeSign: city.lat >= 0 ? 1 : -1 };
+const WATCH_ROTATION = 90 * DEG;
 let metrics = null;
 
 const COLORS = {
@@ -44,7 +45,7 @@ function projectEquatorial(ra, dec) {
   const limit = state.latitudeSign * declinationLimit();
   const normalized = Math.abs(centerDec - polarDec) / Math.abs(centerDec - limit);
   if (!Number.isFinite(normalized) || normalized > 1.04) return null;
-  const hourAngle = (localSiderealHours(state.date, city.lon) - horizontal.ra) * state.latitudeSign * 15 * DEG;
+  const hourAngle = (localSiderealHours(state.date, city.lon) - horizontal.ra) * state.latitudeSign * 15 * DEG + WATCH_ROTATION;
   return { x: metrics.cx + Math.cos(hourAngle) * metrics.radius * normalized, y: metrics.cy + Math.sin(hourAngle) * metrics.radius * normalized };
 }
 
@@ -86,6 +87,34 @@ function drawGrid() {
     const points = []; for (let dec = 0; dec >= declinationLimit(); dec -= 2) points.push([hour, state.latitudeSign * dec]);
     ctx.beginPath(); drawPath(points, projectEquatorial); ctx.stroke();
   }
+  ctx.restore();
+}
+
+function drawAuxiliaryPlanes() {
+  ctx.save();
+  ctx.setLineDash([7, 6]);
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "rgba(244, 238, 209, .68)";
+  const equator = [];
+  for (let ra = 0; ra <= 24; ra += .25) equator.push([ra, 0]);
+  ctx.beginPath(); drawPath(equator, projectEquatorial); ctx.stroke();
+
+  ctx.strokeStyle = "rgba(242, 195, 108, .86)";
+  const ecliptic = [];
+  for (let longitude = 0; longitude <= 360; longitude += 2) {
+    const coordinates = eclipticToEquatorial(longitude, state.date);
+    ecliptic.push([coordinates.ra, coordinates.dec]);
+  }
+  ctx.beginPath(); drawPath(ecliptic, projectOfDate); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.font = "10px Segoe UI,sans-serif";
+  ctx.fillStyle = "rgba(244,238,209,.85)";
+  const equatorLabel = projectEquatorial(6, 0);
+  if (equatorLabel) ctx.fillText("天赤道", equatorLabel.x + 5, equatorLabel.y - 5);
+  ctx.fillStyle = "rgba(242,195,108,.9)";
+  const eclipticLabel = projectOfDate(6, 0);
+  if (eclipticLabel) ctx.fillText("黄道", eclipticLabel.x + 5, eclipticLabel.y + 12);
   ctx.restore();
 }
 
@@ -178,7 +207,7 @@ function render() {
   ctx.clearRect(0, 0, metrics.width, metrics.height);
   drawBackground();
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
-  drawGalaxy(); drawGrid(); drawConstellations(); drawStars(); drawBodies();
+  drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies();
   ctx.restore();
   drawHorizonCover(); drawBezel(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
