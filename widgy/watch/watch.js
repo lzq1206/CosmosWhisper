@@ -11,6 +11,8 @@ const city = CITY_BY_ID.get(cityId) || CITY_BY_ID.get("beijing");
 const ctx = canvas.getContext("2d");
 const state = { date: new Date(), latitudeSign: city.lat >= 0 ? 1 : -1, timeRing: null };
 const WATCH_ROTATION = 90 * DEG;
+const BEIJING_YEAR_FORMATTER = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Shanghai", year: "numeric" });
+const BEIJING_UTC_OFFSET_MS = 8 * 60 * 60 * 1000;
 let metrics = null;
 let timeRingCacheKey = "";
 
@@ -218,11 +220,11 @@ function drawEclipticNumbers() {
   ctx.strokeStyle = "rgba(5, 16, 35, .96)";
   ctx.fillStyle = "rgba(245, 214, 140, .96)";
 
+  // Mark the Sun's actual ecliptic longitude at the start of each Beijing calendar month.
+  const year = Number(BEIJING_YEAR_FORMATTER.format(state.date));
   for (let index = 0; index < 12; index += 1) {
-    const monthStart = new Date(state.date.getFullYear(), index, 1, 12);
-    const nextMonthStart = new Date(state.date.getFullYear(), index + 1, 1, 12);
-    const monthMidpoint = new Date((monthStart.getTime() + nextMonthStart.getTime()) / 2);
-    const longitude = solarLongitude(monthMidpoint);
+    const monthStart = new Date(Date.UTC(year, index, 1) - BEIJING_UTC_OFFSET_MS);
+    const longitude = solarLongitude(monthStart);
     const beforeCoordinates = eclipticToEquatorial(longitude - 1, state.date);
     const coordinates = eclipticToEquatorial(longitude, state.date);
     const afterCoordinates = eclipticToEquatorial(longitude + 1, state.date);
