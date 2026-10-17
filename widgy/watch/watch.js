@@ -42,7 +42,7 @@ const COLORS = {
   gold: "#dcb870",
   goldBright: "#f5d68c",
   line: "rgba(122, 199, 214, .82)",
-  boundary: "rgba(143, 168, 203, .62)",
+  boundary: "rgba(143, 168, 203, .4)",
 };
 
 function resize() {
@@ -215,9 +215,10 @@ function drawGalaxy() {
 }
 
 function drawConstellations() {
-  ctx.save(); ctx.setLineDash([3, 5]);
+  ctx.save();
   for (const constellation of CONSTELLATIONS) {
-    for (const boundary of constellation.boundaryParts) { ctx.beginPath(); drawPath(boundary, projectEquatorial); ctx.strokeStyle = COLORS.boundary; ctx.lineWidth = .8; ctx.stroke(); }
+    for (const boundary of constellation.boundaryParts) { ctx.setLineDash([]); ctx.beginPath(); drawPath(boundary, projectEquatorial); ctx.strokeStyle = COLORS.boundary; ctx.lineWidth = .4; ctx.stroke(); }
+    ctx.setLineDash([3, 5]);
     for (const line of constellation.lines) { ctx.beginPath(); drawPath(line, projectEquatorial); ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; ctx.stroke(); }
   }
   ctx.restore();
@@ -294,17 +295,13 @@ function drawBodies() {
 function drawConstellationLabels() {
   ctx.save();
   ctx.fillStyle = COLORS.boundary;
-  ctx.font = "8px Segoe UI,sans-serif";
+  ctx.font = "4px Segoe UI,sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = .8;
-  ctx.strokeStyle = "rgba(3,8,23,.66)";
   for (const constellation of CONSTELLATIONS) {
     for (const [ra, dec] of constellation.labels) {
       const point = projectEquatorial(ra, dec);
       if (point) {
-        ctx.strokeText(constellation.name, point.x, point.y);
         ctx.fillText(constellation.name, point.x, point.y);
       }
     }
