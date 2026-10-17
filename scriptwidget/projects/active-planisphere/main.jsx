@@ -358,6 +358,36 @@ function projectActivityOfDate(ra, dec, date, radius) {
   };
 }
 
+// The activity chart's star map is laid out at a fixed sidereal reference and
+// rotated as one background layer. Text and live body markers use the current
+// projection above, so their glyphs stay upright while following the same sky.
+function projectActivityReference(ra, dec, radius) {
+  const latitudeSign = CITY.lat >= 0 ? 1 : -1;
+  const poleDeclination = latitudeSign * 90;
+  const limitDeclination = latitudeSign > 0
+    ? Math.max(-90, CITY.lat - 110)
+    : Math.min(90, CITY.lat + 110);
+  const normalized = Math.abs(poleDeclination - dec) / Math.abs(poleDeclination - limitDeclination);
+  if (!Number.isFinite(normalized) || normalized > 1.04) return null;
+  const distance = radius * normalized;
+  const angle = WATCH_ROTATION + ra * latitudeSign * 15 * DEG;
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+    radius: distance
+  };
+}
+
+function projectActivityReferenceEquatorial(ra, dec, date, radius) {
+  const apparent = precessEquatorial(ra, dec, date);
+  return projectActivityReference(apparent.ra, apparent.dec, radius);
+}
+
+function activityBackgroundRotation(date) {
+  const latitudeSign = CITY.lat >= 0 ? 1 : -1;
+  return -mod(localSiderealHours(date, CITY.lon), 24) * latitudeSign * 15;
+}
+
 function projectActivityEquatorial(ra, dec, date, radius) {
   const apparent = precessEquatorial(ra, dec, date);
   return projectActivityOfDate(apparent.ra, apparent.dec, date, radius);
@@ -676,6 +706,13 @@ function buildPlanisphereDial(D, date, bodies, mode) {
   const projectDate = activePlanisphere
     ? (ra, dec) => projectActivityOfDate(ra, dec, date, innerRadius)
     : (ra, dec) => projectOfDate(ra, dec, date, innerRadius);
+  const projectSkyBase = activePlanisphere
+    ? (ra, dec) => projectActivityReferenceEquatorial(ra, dec, date, innerRadius)
+    : projectStar;
+  const projectDateBase = activePlanisphere
+    ? (ra, dec) => projectActivityReference(ra, dec, innerRadius)
+    : projectDate;
+  const backgroundRotation = activePlanisphere ? activityBackgroundRotation(date) : 0;
 
   // Layered circles approximate the website's blue radial sky gradient.
   skyNodes.push(<circle frame={`${2 * innerRadius},${2 * innerRadius}`} color="#030817" />);
@@ -703,7 +740,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
         const eq = equatorialAtHorizontal(azimuth, altitude, date);
         path.push([eq.ra, eq.dec]);
       }
-      addPolyline(gridNodes, D, path, projectDate, Math.max(0.34, 0.62 * scale), "#6a84ac", 0.30, 1, true);
+      addPolyline(gridNodes, D, path, projectDateBase, Math.max(0.34, 0.62 * scale), "#6a84ac", 0.30, 1, true);
     }
     for (let azimuth = 0; azimuth < 360; azimuth += 15) {
       const path = [];
@@ -712,7 +749,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
         const eq = equatorialAtHorizontal(azimuth, altitude, date);
         path.push([eq.ra, eq.dec]);
       }
-      addPolyline(gridNodes, D, path, projectDate, Math.max(0.34, 0.58 * scale), "#6a84ac", 0.27);
+      addPolyline(gridNodes, D, path, projectDateBase, Math.max(0.34, 0.58 * scale), "#6a84ac", 0.27);
     }
   } else {
     for (let altitude = 15; altitude < 90; altitude += 15) {
@@ -733,15 +770,15 @@ function buildPlanisphereDial(D, date, bodies, mode) {
   }
 
   // Milky Way is a narrow, softly layered band, never a large filled polygon.
-  addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, (ra, dec) => projectStar(ra, dec),
+  addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, projectSkyBase,
     Math.max(1.2, 4.2 * scale), "#d9e8ff", 0.045, D < 190 ? 2 : 1);
-  addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, (ra, dec) => projectStar(ra, dec),
+  addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, projectSkyBase,
     Math.max(0.55, 1.4 * scale), "#eff5ff", 0.10, D < 190 ? 2 : 1);
 
   // Ecliptic and celestial equator use the web palette and real date precession.
   const equator = [];
   for (let ra = 0; ra <= 24; ra += 0.5) equator.push([ra % 24, 0]);
-  addPolyline(skyNodes, D, equator, (ra, dec) => projectStar(ra, dec),
+  addPolyline(skyNodes, D, equator, projectSkyBase,
     Math.max(0.48, 0.7 * scale), "#ef6868", 0.86, 1, true);
 
   const ecliptic = [];
@@ -749,7 +786,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     const coordinates = eclipticToEquatorial(longitude, 0, meanObliquity(date));
     ecliptic.push([coordinates.ra, coordinates.dec]);
   }
-  addPolyline(skyNodes, D, ecliptic, (ra, dec) => projectDate(ra, dec),
+  addPolyline(skyNodes, D, ecliptic, projectDateBase,
     Math.max(0.72, 1.4 * scale), "#f2c36c", 0.86, 1, true);
 
   const horizonNodes = [];
@@ -759,7 +796,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
       const eq = equatorialAtHorizontal(azimuth, 0, date);
       horizon.push([eq.ra, eq.dec]);
     }
-    addPolyline(horizonNodes, D, horizon, projectDate, Math.max(0.55, 0.9 * scale), "#f5f5f5", 0.88, 1, true);
+    addPolyline(horizonNodes, D, horizon, projectDateBase, Math.max(0.55, 0.9 * scale), "#f5f5f5", 0.88, 1, true);
   }
 
   // Constellation boundary lines and connecting lines from the repository data.
@@ -767,13 +804,13 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     const constellation = CONSTELLATIONS[conIndex];
     const boundaryStep = D < 190 ? 2 : 1;
     for (const boundary of constellation.boundaryParts) {
-      addPolyline(boundaryNodes, D, boundary, (ra, dec) => projectStar(ra, dec),
+      addPolyline(boundaryNodes, D, boundary, projectSkyBase,
         Math.max(0.34, 0.46 * scale), "#91aacf", 0.30, boundaryStep);
     }
     const lineSkip = D < 190 && conIndex % 2 === 1;
     if (!lineSkip) {
       for (const line of constellation.lines) {
-        addPolyline(constellationNodes, D, line, (ra, dec) => projectStar(ra, dec),
+        addPolyline(constellationNodes, D, line, projectSkyBase,
           Math.max(0.36, 0.52 * scale), "#7ac7d6", 0.43, D < 190 ? 2 : 1);
       }
     }
@@ -783,15 +820,16 @@ function buildPlanisphereDial(D, date, bodies, mode) {
   const starLimit = D < 190 ? 4.0 : 4.9;
   for (const star of STARS) {
     if (star.magnitude > starLimit) continue;
-    const point = projectStar(star.ra, star.dec);
+    const point = projectSkyBase(star.ra, star.dec);
+    const labelPoint = projectStar(star.ra, star.dec);
     if (!point) continue;
     const diameter = clamp((2.0 + (3.6 - star.magnitude) * 1.2) * scale, 0.7, 3.8 * scale);
     const color = star.tone === "warm" ? "#ffd596" : star.tone === "blue" ? "#c9dcff" : "#f5f0df";
     const alpha = clamp(1.02 - star.magnitude / 7, 0.42, 1);
     if (star.magnitude <= 1.4) addDot(starNodes, D, point.x, point.y, diameter * 3.2, color, 0.10);
     addDot(starNodes, D, point.x, point.y, diameter, color, alpha);
-    if (star.magnitude <= 1.2 && star.name) {
-      labelNodes.push(placeText(D, point.x + 6 * scale, point.y - 3 * scale, 24 * scale + 3, 8 * scale + 2,
+    if (star.magnitude <= 1.2 && star.name && labelPoint) {
+      labelNodes.push(placeText(D, labelPoint.x + 6 * scale, labelPoint.y - 3 * scale, 24 * scale + 3, 8 * scale + 2,
         star.name, Math.max(4.5, 8 * scale), "#f0eee5", 0.74, 0, "regular"));
     }
   }
@@ -914,16 +952,20 @@ function buildPlanisphereDial(D, date, bodies, mode) {
       <circle frame={`${2 * radius + borderWidth},${2 * radius + borderWidth}`} color="#f5f5f5" opacity="0.85" />
       <circle frame={`${2 * innerRadius},${2 * innerRadius}`} color="#030817" />
       <zstack frame={`${2 * innerRadius},${2 * innerRadius}`} clip="circle" alignment="center">
-        {skyNodes}
-        {galaxyNodes}
-        {gridNodes}
-        {horizonNodes}
-        {boundaryNodes}
-        {constellationNodes}
-        {starNodes}
-        {bodyNodes}
-        {labelNodes}
-        {directionNodes}
+        <zstack frame={`${D},${D}`} alignment="center" rotation={backgroundRotation}>
+          {skyNodes}
+          {galaxyNodes}
+          {gridNodes}
+          {horizonNodes}
+          {boundaryNodes}
+          {constellationNodes}
+          {starNodes}
+        </zstack>
+        <zstack frame={`${D},${D}`} alignment="center">
+          {bodyNodes}
+          {labelNodes}
+          {directionNodes}
+        </zstack>
       </zstack>
 
       {/* Web-style solar terms and twilight/day/moonlight outer time ring. */}
@@ -989,4 +1031,5 @@ if (rawFamily.includes("inline")) {
   );
 } else {
   $render(<zstack frame="max" alignment="center" background="#030817">{buildPlanisphereDial(332, now, bodies, "large")}</zstack>);
+}
 }
