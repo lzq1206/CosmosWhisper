@@ -2,17 +2,32 @@
   "formatVersion": 2,
   "id": "com.lzq1206.cosmoswhisper.active-planisphere",
   "name": "CosmosWhisper · 活动星盘",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
   "supportedFamilies": [
     "systemSmall",
     "systemMedium",
-    "systemLarge"
+    "systemLarge",
+    "accessoryCircular",
+    "accessoryRectangular",
+    "accessoryInline"
   ],
-  "permissions": [],
+  "permissions": [
+    "location"
+  ],
   "networkDomains": [],
-  "description": "上海活动星盘快照，中央时针、分针与扫秒秒针。",
+  "plugins": [],
+  "description": "网页 Watch 风格的当前位置旋转活动星盘。",
+  "category": "Astronomy",
+  "tags": [
+    "astronomy",
+    "planisphere",
+    "local-location",
+    "moon-phase",
+    "solar-terms",
+    "web-style"
+  ],
   "author": {
     "name": "lzq1206",
     "url": "https://github.com/lzq1206/CosmosWhisper"
