@@ -146,6 +146,11 @@ export class SkyRenderer {
   projectEquatorialUnclipped(ra, dec, state) {
     if (!this.metrics) return null;
     const horizontal = equatorialToHorizontal(ra, dec, state.date, state.location.lat, state.location.lon);
+    return this.projectHorizontalUnclipped(horizontal, state);
+  }
+
+  projectHorizontalUnclipped(horizontal, state) {
+    if (!this.metrics) return null;
     const { baseRadius, centerX, centerY } = this.metrics;
     const radius = baseRadius * state.zoom * (1 - clamp(horizontal.altitude, -90, 90) / 90);
     const angle = horizontal.azimuth * DEG;
@@ -260,17 +265,19 @@ export class SkyRenderer {
     }
     ctx.restore();
 
-    const visibleRaLabels = [0, 6, 12, 18];
-    ctx.save();
-    ctx.fillStyle = "rgba(164, 181, 216, 0.58)";
-    ctx.font = "9px Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    for (const hour of visibleRaLabels) {
-      const point = this.projectEquatorial(hour, 0, state);
-      if (!point) continue;
-      ctx.fillText(`${String(hour).padStart(2, "0")}h`, point.x, point.y - 8);
+    if (!usesWatchDial(state)) {
+      const visibleRaLabels = [0, 6, 12, 18];
+      ctx.save();
+      ctx.fillStyle = "rgba(164, 181, 216, 0.58)";
+      ctx.font = "9px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      for (const hour of visibleRaLabels) {
+        const point = this.projectEquatorial(hour, 0, state);
+        if (!point) continue;
+        ctx.fillText(`${String(hour).padStart(2, "0")}h`, point.x, point.y - 8);
+      }
+      ctx.restore();
     }
-    ctx.restore();
   }
 
   drawEcliptic(ctx, state) {
@@ -425,12 +432,14 @@ export class SkyRenderer {
 
   drawBodies(ctx, state) {
     const sun = state.bodies?.find((body) => body.id === "sun");
-    const sunPoint = sun ? this.projectHorizontal(sun.horizontal, state) : null;
+    const sunPoint = usesWatchDial(state) && sun
+      ? this.projectHorizontalUnclipped(sun.horizontal, state)
+      : null;
     for (const body of state.bodies ?? []) {
       const point = this.projectHorizontal(body.horizontal, state);
       if (!point) continue;
       const radius = body.size * Math.sqrt(state.zoom);
-      if (body.id === "moon" && state.widgyMode) {
+      if (body.id === "moon" && usesWatchDial(state)) {
         this.drawMoonPhase(ctx, point, body, sunPoint, radius);
       } else {
         ctx.save();
@@ -708,14 +717,16 @@ export class SkyRenderer {
       ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(216, 196, 142, 0.86)";
-    ctx.font = "9px Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    for (const [label, fraction] of [["0h", 0], ["6h", 0.25], ["12h", 0.5], ["18h", 0.75]]) {
-      const angle = -Math.PI / 2 + fraction * TAU;
-      const distance = state.widgetMode ? timeOuter - 1 : timeOuter + 5;
-      ctx.fillText(label, center.x + Math.cos(angle) * distance, center.y + Math.sin(angle) * distance);
+    if (!usesWatchDial(state)) {
+      ctx.fillStyle = "rgba(216, 196, 142, 0.86)";
+      ctx.font = "9px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const [label, fraction] of [["0h", 0], ["6h", 0.25], ["12h", 0.5], ["18h", 0.75]]) {
+        const angle = -Math.PI / 2 + fraction * TAU;
+        const distance = state.widgetMode ? timeOuter - 1 : timeOuter + 5;
+        ctx.fillText(label, center.x + Math.cos(angle) * distance, center.y + Math.sin(angle) * distance);
+      }
     }
 
     const fraction = state.timeRing?.timeFraction ?? localClockFraction(state.date);

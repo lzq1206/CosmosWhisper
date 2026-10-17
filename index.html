@@ -9,16 +9,41 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-homepage="true">
-    <main id="sky-app" aria-label="CosmosWhisper 本地天空星图">
-      <canvas
-        id="sky-canvas"
-        tabindex="0"
-        role="img"
-        aria-label="可交互的本地天空星图"
-        aria-describedby="canvas-status"
-      ></canvas>
-      <p class="sr-only" id="canvas-status" role="status">星图加载中。</p>
-    </main>
-    <script type="module" src="./src/main.js?v=20261017.2"></script>
+    <section id="homepage-view" aria-label="CosmosWhisper 首页星图">
+      <main id="sky-app" aria-label="CosmosWhisper 本地天空星图">
+        <canvas
+          id="sky-canvas"
+          tabindex="0"
+          role="img"
+          aria-label="可交互的本地天空星图"
+          aria-describedby="canvas-status"
+        ></canvas>
+        <p class="sr-only" id="canvas-status" role="status">星图加载中。</p>
+      </main>
+      <a class="page-scroll-link" href="#watch-preview">向下查看活动星盘 <span aria-hidden="true">↓</span></a>
+    </section>
+
+    <section class="watch-preview" id="watch-preview" aria-labelledby="watch-preview-title">
+      <header class="watch-preview-heading">
+        <div>
+          <p class="eyebrow">COSMOSWHISPER / WATCH</p>
+          <h1 id="watch-preview-title">活动星盘</h1>
+          <p>实时旋转的 Watch 版星盘。</p>
+        </div>
+        <a href="./widgy/watch/">单独打开活动星盘 <span aria-hidden="true">↗</span></a>
+      </header>
+      <iframe
+        class="watch-preview-frame"
+        src="./widgy/watch/index.html"
+        title="CosmosWhisper 活动星盘 Watch 版"
+        loading="lazy"
+      ></iframe>
+    </section>
+
+    <footer class="homepage-footer">
+      <a href="./widgy/">浏览 Widgy 星盘目录 <span aria-hidden="true">→</span></a>
+    </footer>
+
+    <script type="module" src="./src/main.js?v=20261017.3"></script>
   </body>
 </html>

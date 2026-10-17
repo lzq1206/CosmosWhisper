@@ -4,53 +4,175 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#030817" />
-    <title>CosmosWhisper · 城市索引</title>
+    <title>CosmosWhisper · Widgy 星盘目录</title>
     <style>
-      :root{color-scheme:dark;--bg:#030817;--panel:#0a1530;--line:#263a62;--ink:#f0eee5;--muted:#94a2bd;--gold:#f2c36c;--cyan:#79c8d2}
-      *{box-sizing:border-box}
-      html,body{margin:0;min-width:320px;min-height:100%;background:radial-gradient(circle at 80% 0%,#11244a 0,#030817 32rem);color:var(--ink);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-      body{padding:28px 18px 44px}
-      .shell{width:min(1080px,100%);margin:0 auto}
-      header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:10px 0 30px;border-bottom:1px solid var(--line)}
-      .mark{display:flex;align-items:center;gap:12px}.mark-dot{width:30px;height:30px;display:grid;place-items:center;border:1px solid #c9a769;border-radius:50%;color:var(--gold);font-family:Georgia,serif}.eyebrow{margin:0 0 8px;color:#667896;font-size:10px;font-weight:700;letter-spacing:.2em}.title{margin:0;font:400 clamp(28px,5vw,48px)/1.05 Georgia,"Songti SC",serif;letter-spacing:-.04em}.intro{max-width:300px;margin:0;color:var(--muted);font-size:12px;line-height:1.7;text-align:right}
-      .section{padding-top:28px}.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}.section h2{margin:0;font:400 21px Georgia,"Songti SC",serif}.count{color:var(--faint,#64738f);font-size:10px;letter-spacing:.12em}
-      .city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px}
-      .city{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:9px 11px;border:1px solid rgba(132,154,194,.2);border-radius:7px;background:rgba(10,21,48,.82);color:var(--ink);text-decoration:none;transition:border-color .15s,background .15s,transform .15s}.city:hover{border-color:var(--cyan);background:rgba(121,200,210,.1);transform:translateY(-1px)}.city small{color:#63728f;font-size:9px;font-variant-numeric:tabular-nums}.city strong{font-size:12px;font-weight:500}
-      .city-actions{display:flex;gap:5px;margin-left:auto}.city-actions a{padding:3px 5px;color:var(--cyan);border:1px solid rgba(121,200,210,.3);border-radius:4px;font-size:9px;text-decoration:none}.city-actions a:hover{color:var(--ink);border-color:var(--cyan)}
-      footer{padding-top:32px;color:#63728f;font-size:10px}
-      @media (max-width:600px){body{padding:18px 12px 32px}header{display:block;padding-bottom:22px}.intro{max-width:none;margin-top:12px;text-align:left}.city-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      :root {
+        color-scheme: dark;
+        --bg: #030817;
+        --panel: rgba(10, 21, 48, .88);
+        --line: rgba(132, 154, 194, .2);
+        --ink: #f0eee5;
+        --muted: #94a2bd;
+        --gold: #f2c36c;
+        --cyan: #79c8d2;
+      }
+
+      * { box-sizing: border-box; }
+
+      html,
+      body {
+        min-width: 320px;
+        min-height: 100%;
+        margin: 0;
+        background: radial-gradient(circle at 80% 0%, #11244a 0, var(--bg) 34rem);
+        color: var(--ink);
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      body { padding: 28px 18px 44px; }
+      .shell { width: min(1080px, 100%); margin: 0 auto; }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 10px 0 26px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .mark { display: flex; align-items: center; gap: 12px; }
+      .mark-dot {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid #c9a769;
+        border-radius: 50%;
+        color: var(--gold);
+        font-family: Georgia, serif;
+      }
+      .eyebrow { margin: 0 0 8px; color: #8292af; font-size: 10px; font-weight: 700; letter-spacing: .18em; }
+      h1 { margin: 0; font: 400 clamp(28px, 5vw, 46px)/1.08 Georgia, "Songti SC", serif; letter-spacing: -.035em; }
+      .intro { max-width: 370px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.8; text-align: right; }
+      .intro strong { color: var(--ink); font-weight: 600; }
+
+      .section { padding-top: 28px; }
+      .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .section h2 { margin: 0; font: 400 21px Georgia, "Songti SC", serif; }
+      .count { color: #64738f; font-size: 10px; letter-spacing: .12em; }
+
+      .city-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 10px; }
+      .city-card {
+        display: grid;
+        gap: 15px;
+        min-width: 0;
+        padding: 15px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+      }
+      .city-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .city-meta strong { font-size: 15px; font-weight: 550; }
+      .city-meta small { color: #7f8eaa; font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+      .city-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .chart-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 8px 6px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        transition: background .15s, border-color .15s, transform .15s;
+      }
+      .chart-action:hover { transform: translateY(-1px); }
+      .chart-action:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+      .chart-static { border-color: rgba(121, 200, 210, .35); background: rgba(121, 200, 210, .09); color: #a8e2e6; }
+      .chart-static:hover { border-color: var(--cyan); background: rgba(121, 200, 210, .16); }
+      .chart-live { border-color: rgba(242, 195, 108, .4); background: rgba(242, 195, 108, .09); color: #f4d89f; }
+      .chart-live:hover { border-color: var(--gold); background: rgba(242, 195, 108, .16); }
+
+      footer { padding-top: 30px; color: #7d8ba5; font-size: 11px; line-height: 1.8; }
+      footer a { color: #a8e2e6; text-decoration: none; }
+      footer a:hover { text-decoration: underline; }
+
+      @media (max-width: 600px) {
+        body { padding: 18px 12px 32px; }
+        header { display: grid; gap: 14px; padding-bottom: 20px; }
+        .intro { max-width: none; text-align: left; }
+        .city-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .city-card { gap: 12px; padding: 11px; }
+        .city-meta { align-items: start; flex-direction: column; gap: 4px; }
+        .city-meta strong { font-size: 13px; }
+        .city-meta small { font-size: 9px; }
+        .city-actions { grid-template-columns: 1fr; gap: 6px; }
+        .chart-action { min-height: 42px; font-size: 11px; }
+      }
     </style>
   </head>
   <body>
     <main class="shell">
       <header>
-        <div class="mark"><span class="mark-dot">✦</span><div><p class="eyebrow">COSMOSWHISPER / CITY ATLAS</p><h1 class="title">选择你的地平线</h1></div></div>
-        <p class="intro">选择城市后进入同一套方形星盘。时间、晨昏、月照和行星位置会按该城市重新计算。</p>
+        <div class="mark">
+          <span class="mark-dot" aria-hidden="true">✦</span>
+          <div>
+            <p class="eyebrow">COSMOSWHISPER / WIDGY</p>
+            <h1>选择城市与星盘</h1>
+          </div>
+        </div>
+        <p class="intro"><strong>先选城市，再点盘面按钮。</strong><br />城市名称和卡片背景不会跳转。选择“可见天区”查看固定星盘，选择“活动星盘”打开 Watch 版。</p>
       </header>
       <div id="city-list"></div>
-      <footer>固定星盘保持真实方位。所有位置为城市中心近似坐标。</footer>
+      <footer>
+        “可见天区”展示该地的可见星空；“活动星盘”按 Watch 版样式显示旋转星盘。<br />
+        <a href="../">返回 CosmosWhisper 首页</a> · 城市位置取市中心近似坐标。
+      </footer>
     </main>
     <script type="module">
       import { CITIES } from "../src/data/cities.js";
+
       const list = document.querySelector("#city-list");
       const groups = new Map();
+
       for (const city of CITIES) {
         if (!groups.has(city.group)) groups.set(city.group, []);
         groups.get(city.group).push(city);
       }
+
       for (const [group, cities] of groups) {
         const section = document.createElement("section");
         section.className = "section";
-        section.innerHTML = `<div class="section-head"><h2>${group}</h2><span class="count">${cities.length} CITIES</span></div>`;
+
+        const heading = document.createElement("div");
+        heading.className = "section-head";
+        heading.innerHTML = `<h2>${group}</h2><span class="count">${cities.length} CITIES</span>`;
+
         const grid = document.createElement("div");
         grid.className = "city-grid";
+
         for (const city of cities) {
-          const card = document.createElement("div");
-          card.className = "city";
-          card.innerHTML = `<strong>${city.name}</strong><small>${city.lat.toFixed(1)}°</small><span class="city-actions"><a href="./city.html?city=${encodeURIComponent(city.id)}">固定星盘</a></span>`;
+          const card = document.createElement("article");
+          card.className = "city-card";
+          card.innerHTML = `
+            <div class="city-meta">
+              <strong>${city.name}</strong>
+              <small>${city.lat.toFixed(1)}° N · ${city.lon.toFixed(1)}° E</small>
+            </div>
+            <nav class="city-actions" aria-label="${city.name}星盘类型">
+              <a class="chart-action chart-static" href="./city.html?city=${encodeURIComponent(city.id)}">可见天区</a>
+              <a class="chart-action chart-live" href="./watch/?city=${encodeURIComponent(city.id)}">活动星盘</a>
+            </nav>`;
           grid.append(card);
         }
-        section.append(grid);
+
+        section.append(heading, grid);
         list.append(section);
       }
     </script>

@@ -5,7 +5,7 @@ import {
   planetaryBodies,
   solarAltitude,
 } from "./astro.js";
-import { SkyRenderer } from "./renderer.js?v=20261017.2";
+import { SkyRenderer } from "./renderer.js?v=20261017.3";
 
 const DEFAULT_LOCATION = {
   lat: 31.2,
@@ -296,6 +296,7 @@ canvas.addEventListener("pointerleave", () => {
   }
 });
 canvas.addEventListener("wheel", (event) => {
+  if (state.homepageMode && !event.shiftKey) return;
   event.preventDefault();
   adjustZoom(event.deltaY > 0 ? -0.1 : 0.1);
 }, { passive: false });
