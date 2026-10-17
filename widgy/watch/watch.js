@@ -515,14 +515,23 @@ function drawTimeRing() {
     ctx.stroke();
   }
 
-  ctx.fillStyle = "rgba(216,196,142,.86)";
-  ctx.font = "9px Segoe UI,sans-serif";
+  ctx.font = "6px Segoe UI,sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = .8;
+  ctx.strokeStyle = "rgba(3,8,23,.96)";
+  ctx.fillStyle = "rgba(246,227,187,.98)";
   for (const [label, fraction] of [["0h", 0], ["6h", .25], ["12h", .5], ["18h", .75]]) {
     const angle = -Math.PI / 2 + fraction * TAU;
-    const distance = timeOuter - 1;
-    ctx.fillText(label, cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance);
+    let rotation = angle + Math.PI / 2;
+    if (Math.cos(rotation) < 0) rotation += Math.PI;
+    ctx.save();
+    ctx.translate(cx + Math.cos(angle) * time, cy + Math.sin(angle) * time);
+    ctx.rotate(rotation);
+    ctx.strokeText(label, 0, 0);
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
   }
 
   const markerAngle = -Math.PI / 2 + state.timeRing.timeFraction * TAU;

@@ -643,6 +643,34 @@ export class SkyRenderer {
       ctx.fillText(term.name, 0, 0);
       ctx.restore();
     }
+
+    const sunHorizontal = state.bodies?.find((body) => body.id === "sun")?.horizontal
+      ?? eclipticToHorizontal(solarLongitude(state.date), state.date, state.location.lat, state.location.lon);
+    const sunAzimuth = sunHorizontal.azimuth * DEG;
+    const sunAngle = usesWatchDial(state) ? -sunAzimuth - Math.PI / 2 : sunAzimuth - Math.PI / 2;
+    const radialX = Math.cos(sunAngle);
+    const radialY = Math.sin(sunAngle);
+    const tangentX = -radialY;
+    const tangentY = radialX;
+    const tipRadius = skyRadius + 6.2;
+    const baseRadius = skyRadius + 0.2;
+    const halfBase = 4.2;
+    const tipX = center.x + radialX * tipRadius;
+    const tipY = center.y + radialY * tipRadius;
+    const baseLeftX = center.x + radialX * baseRadius + tangentX * halfBase;
+    const baseLeftY = center.y + radialY * baseRadius + tangentY * halfBase;
+    const baseRightX = center.x + radialX * baseRadius - tangentX * halfBase;
+    const baseRightY = center.y + radialY * baseRadius - tangentY * halfBase;
+    ctx.fillStyle = "#f5d68c";
+    ctx.strokeStyle = "rgba(5,16,35,.95)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(baseLeftX, baseLeftY);
+    ctx.lineTo(baseRightX, baseRightY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 
