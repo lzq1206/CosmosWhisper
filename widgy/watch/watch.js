@@ -175,6 +175,8 @@ function drawHorizonCover() {
   ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU);
   ctx.moveTo(metrics.cx + metrics.radius, metrics.cy);
   drawPath(horizon, projectOfDate, true);
+  ctx.fillStyle = "#07142e";
+  ctx.fill("evenodd");
   ctx.strokeStyle = "rgba(245,214,140,.7)";
   ctx.lineWidth = 1.5;
   ctx.beginPath(); drawPath(horizon, projectOfDate, true); ctx.stroke();
