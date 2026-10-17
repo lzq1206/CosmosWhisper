@@ -477,20 +477,20 @@ function drawTimeRing() {
   ctx.save();
   ctx.translate(markerX, markerY);
   ctx.rotate(markerAngle);
-  ctx.strokeStyle = "#ffe6a6";
-  ctx.fillStyle = "#ffd675";
-  ctx.lineWidth = 1.35;
+  ctx.strokeStyle = "#ff625f";
+  ctx.fillStyle = "#ff292f";
+  ctx.lineWidth = 2;
   ctx.lineCap = "round";
-  ctx.shadowColor = "rgba(255, 211, 116, .85)";
-  ctx.shadowBlur = 4;
+  ctx.shadowColor = "rgba(255, 35, 48, .95)";
+  ctx.shadowBlur = 5;
   ctx.beginPath();
-  ctx.arc(0, 0, 1.8, 0, TAU);
+  ctx.arc(0, 0, 2.5, 0, TAU);
   ctx.fill();
   for (let ray = 0; ray < 8; ray += 1) {
     const angle = ray * TAU / 8;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(angle) * 3.1, Math.sin(angle) * 3.1);
-    ctx.lineTo(Math.cos(angle) * 5.4, Math.sin(angle) * 5.4);
+    ctx.moveTo(Math.cos(angle) * 3.8, Math.sin(angle) * 3.8);
+    ctx.lineTo(Math.cos(angle) * 6.4, Math.sin(angle) * 6.4);
     ctx.stroke();
   }
   ctx.restore();
