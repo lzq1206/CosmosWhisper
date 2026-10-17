@@ -2,6 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 import { STARS } from "../src/data/stars.js";
 import { CONSTELLATIONS } from "../src/data/constellations.js";
 import { MILKY_WAY_RINGS } from "../src/data/milkyWay.js";
@@ -11,6 +12,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PROJECTS = path.join(ROOT, "scriptwidget", "projects");
 const EXPORTS = path.join(ROOT, "scriptwidget", "exports");
 const RUNTIME = path.join(ROOT, "scriptwidget", "runtime", "planisphere-main.jsx");
+const SKY_BASE_SIZE = 512;
+const SKY_BASE_CENTER = SKY_BASE_SIZE / 2;
+const SKY_BASE_RADIUS = 250;
+const DEG = Math.PI / 180;
 
 const packageDefinitions = [
   {
@@ -25,7 +30,7 @@ const packageDefinitions = [
     name: "CosmosWhisper · 活动星盘",
     id: "com.lzq1206.cosmoswhisper.active-planisphere",
     description: "网页 Watch 风格的当前位置旋转活动星盘。",
-    readme: "活动星盘版沿用 CosmosWhisper 网页 Watch 的极轴旋转投影、蓝金配色、方位网格、二十四节气环、日照外环和动态月相。恒星与天体按设备位置和本地时间计算。",
+    readme: "活动星盘版沿用 CosmosWhisper 网页 Watch 的极轴旋转投影和蓝金配色。星空、银河与星座线打包为可旋转底图，星名、方位和天体标注由程序按设备位置与本地时间定位显示；外圈保留二十四节气和日照信息。",
   },
 ];
 
@@ -83,6 +88,88 @@ function buildMilkyWayCenterline() {
   });
 }
 
+function projectReferencePoint(ra, dec, hemisphere) {
+  const latitudeSign = hemisphere === "north" ? 1 : -1;
+  const radius = (90 - latitudeSign * dec) / 180 * SKY_BASE_RADIUS;
+  const angle = Math.PI / 2 + ra * 15 * DEG * latitudeSign;
+  return {
+    x: SKY_BASE_CENTER + Math.cos(angle) * radius,
+    y: SKY_BASE_CENTER + Math.sin(angle) * radius,
+  };
+}
+
+function svgPath(points, hemisphere, close = false) {
+  if (points.length < 2) return "";
+  const commands = points.map(([ra, dec], index) => {
+    const point = projectReferencePoint(ra, dec, hemisphere);
+    return `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`;
+  });
+  if (close) commands.push("Z");
+  return commands.join(" ");
+}
+
+function buildSkyBaseSvg(hemisphere) {
+  const galaxyPaths = MILKY_WAY_RINGS
+    .map((ring) => svgPath(simplifyPolyline(ring, 360), hemisphere, true))
+    .join(" ");
+  const boundaries = CONSTELLATIONS.flatMap((constellation) => constellation.boundaryParts)
+    .map((path) => `<path d="${svgPath(simplifyPolyline(path, 11), hemisphere)}"/>`)
+    .join("");
+  const constellationLines = CONSTELLATIONS.flatMap((constellation) => constellation.lines)
+    .map((path) => `<path d="${svgPath(simplifyPolyline(path, 11), hemisphere)}"/>`)
+    .join("");
+  const stars = STARS.filter((star) => star.magnitude <= 4.9).map((star) => {
+    const point = projectReferencePoint(star.ra, star.dec, hemisphere);
+    const radius = Math.max(0.65, 1.0 + (3.8 - star.magnitude) * 0.26);
+    const color = star.tone === "warm" ? "#ffd596" : star.tone === "blue" ? "#c9dcff" : "#f5f0df";
+    const glow = star.magnitude <= 1.4
+      ? `<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${(radius * 3.1).toFixed(2)}" fill="${color}" opacity="0.13"/>`
+      : "";
+    return `${glow}<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${radius.toFixed(2)}" fill="${color}" opacity="${Math.min(1, Math.max(0.42, 1.02 - star.magnitude / 7)).toFixed(2)}"/>`;
+  }).join("");
+
+  const equator = [];
+  for (let ra = 0; ra <= 24; ra += 0.25) equator.push([ra % 24, 0]);
+  const ecliptic = [];
+  const obliquity = 23.4393 * DEG;
+  for (let longitude = 0; longitude <= 360; longitude += 2) {
+    const lambda = longitude * DEG;
+    const ra = ((Math.atan2(Math.sin(lambda) * Math.cos(obliquity), Math.cos(lambda)) / DEG / 15) % 24 + 24) % 24;
+    const dec = Math.asin(Math.sin(obliquity) * Math.sin(lambda)) / DEG;
+    ecliptic.push([ra, dec]);
+  }
+
+  const declinationGrid = [0.25, 0.5, 0.75].map((fraction) =>
+    `<circle cx="${SKY_BASE_CENTER}" cy="${SKY_BASE_CENTER}" r="${(SKY_BASE_RADIUS * fraction).toFixed(2)}"/>`).join("");
+  const rightAscensionGrid = Array.from({ length: 12 }, (_, index) => {
+    const angle = (Math.PI / 2 + (index / 12) * Math.PI * 2) * (hemisphere === "north" ? 1 : -1);
+    const x = SKY_BASE_CENTER + Math.cos(angle) * SKY_BASE_RADIUS;
+    const y = SKY_BASE_CENTER + Math.sin(angle) * SKY_BASE_RADIUS;
+    return `<path d="M${SKY_BASE_CENTER},${SKY_BASE_CENTER} L${x.toFixed(2)},${y.toFixed(2)}"/>`;
+  }).join("");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${SKY_BASE_SIZE}" height="${SKY_BASE_SIZE}" viewBox="0 0 ${SKY_BASE_SIZE} ${SKY_BASE_SIZE}">
+    <defs><radialGradient id="sky"><stop offset="0" stop-color="#163261"/><stop offset="0.72" stop-color="#0a1b39"/><stop offset="1" stop-color="#030817"/></radialGradient></defs>
+    <rect width="100%" height="100%" fill="#030817"/><circle cx="${SKY_BASE_CENTER}" cy="${SKY_BASE_CENTER}" r="${SKY_BASE_RADIUS}" fill="url(#sky)"/>
+    <path d="${galaxyPaths}" fill="#d9e8ff" fill-rule="evenodd" opacity="0.13"/>
+    <g fill="none" stroke="#91aacf" stroke-width="0.72" opacity="0.24">${boundaries}</g>
+    <g fill="none" stroke="#7ac7d6" stroke-width="0.86" opacity="0.34">${constellationLines}</g>
+    <g fill="none" stroke="#6680a5" stroke-width="0.62" opacity="0.32">${declinationGrid}${rightAscensionGrid}</g>
+    <path d="${svgPath(equator, hemisphere)}" fill="none" stroke="#ef6868" stroke-width="1.0" opacity="0.78"/>
+    <path d="${svgPath(ecliptic, hemisphere)}" fill="none" stroke="#f2c36c" stroke-width="1.5" opacity="0.88"/>
+    ${stars}
+  </svg>`;
+}
+
+async function writeSkyBaseAssets(project) {
+  const imageDirectory = path.join(project, "image");
+  await mkdir(imageDirectory, { recursive: true });
+  for (const hemisphere of ["north", "south"]) {
+    const svg = Buffer.from(buildSkyBaseSvg(hemisphere));
+    await sharp(svg).png().toFile(path.join(imageDirectory, `sky-base-${hemisphere}.png`));
+  }
+}
+
 function replaceData(runtimeTemplate) {
   const start = runtimeTemplate.indexOf("// ==================== 3. 亮星与导航星表");
   const end = runtimeTemplate.indexOf("// ==================== 4. 天文历算核心引擎", start);
@@ -125,12 +212,13 @@ async function writeProjectFiles(definition, sharedRuntimeSource, generatedAt) {
     path.join(imageDirectory, "chart.png"),
   ]) await rm(stalePath, { force: true });
   await writeFile(path.join(project, "main.jsx"), runtimeSource);
+  if (definition.folder === "active-planisphere") await writeSkyBaseAssets(project);
 
   const manifest = {
     formatVersion: 2,
     id: definition.id,
     name: definition.name,
-    version: "1.3.0",
+    version: "1.4.0",
     runtimeVersion: "1.0",
     entry: "main.jsx",
     supportedFamilies: ["systemSmall", "systemMedium", "systemLarge", "accessoryCircular", "accessoryRectangular", "accessoryInline"],

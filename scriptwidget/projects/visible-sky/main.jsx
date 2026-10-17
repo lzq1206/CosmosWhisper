@@ -418,14 +418,12 @@ function placeAt(D, dx, dy, boxW, boxH, child) {
   const left = clamp(Math.round(cx + dx - w / 2), 0, Math.max(0, D - w));
   const top = clamp(Math.round(cy + dy - h / 2), 0, Math.max(0, D - h));
   return (
-    <vstack frame={`${D},${D}`} alignment="leading">
+    <vstack frame={`${D},${D}`} alignment="topLeading" spacing="0">
       <spacer frame={`1,${top}`} />
-      <hstack frame={`${D},${h}`} alignment="center">
+      <hstack frame={`${D},${h}`} alignment="center" spacing="0">
         <spacer frame={`${left},1`} />
-        <zstack frame={`${w},${h}`} alignment="center">{child}</zstack>
-        <spacer />
+        {child}
       </hstack>
-      <spacer />
     </vstack>
   );
 }
@@ -444,7 +442,7 @@ function addLine(nodes, D, x1, y1, x2, y2, thickness, color, opacity = 1) {
   const width = Math.max(0.38, thickness);
   const angle = Math.atan2(dy, dx) * RAD;
   nodes.push(placeAt(D, (x1 + x2) / 2, (y1 + y2) / 2, length + 1, width + 1,
-    <line axis="horizontal" length={length} thickness={width} color={color} opacity={opacity} rotation={angle} />));
+    <line frame={`${length + 1},${width + 1}`} axis="horizontal" length={length} thickness={width} color={color} opacity={opacity} rotation={angle} />));
 }
 
 function addPolyline(nodes, D, points, project, thickness, color, opacity = 1, step = 1, close = false) {
@@ -481,7 +479,7 @@ function polarPoint(angle, radius) {
 
 function placeText(D, x, y, width, height, text, fontSize, color, opacity = 1, rotation = 0, weight = "regular") {
   return placeAt(D, x, y, width, height,
-    <text font={`system,${fontSize}`} fontWeight={weight} color={color} opacity={opacity} rotation={rotation}>{text}</text>);
+    <text frame={`${width},${height}`} font={`system,${fontSize}`} fontWeight={weight} color={color} opacity={opacity} rotation={rotation}>{text}</text>);
 }
 
 function moonCoordinates(date) {
@@ -561,34 +559,26 @@ function buildTimeRing(D, radius, scale, timeRing, date) {
   const trackWidth = 8 * scale;
   const circumference = TAU * trackRadius;
   const count = timeRing.states.length;
-  const segmentLength = circumference / count * 1.06;
-  for (let index = 0; index < count; index += 1) {
-    const angle = -Math.PI / 2 + ((index + 0.5) / count) * TAU;
+  const displaySegments = 12;
+  const segmentLength = circumference / displaySegments * 1.06;
+  for (let index = 0; index < displaySegments; index += 1) {
+    const sourceIndex = Math.min(count - 1, Math.floor((index + 0.5) * count / displaySegments));
+    const angle = -Math.PI / 2 + ((index + 0.5) / displaySegments) * TAU;
     const point = polarPoint(angle, trackRadius);
-    const color = TIME_COLORS[timeRing.states[index]] || TIME_COLORS.night;
+    const color = TIME_COLORS[timeRing.states[sourceIndex]] || TIME_COLORS.night;
     nodes.push(placeAt(D, point.x, point.y, segmentLength + 1, trackWidth + 1,
-      <line axis="horizontal" length={segmentLength} thickness={trackWidth} color={color} rotation={(angle + Math.PI / 2) * RAD} />));
+      <line frame={`${segmentLength + 1},${trackWidth + 1}`} axis="horizontal" length={segmentLength} thickness={trackWidth} color={color} rotation={(angle + Math.PI / 2) * RAD} />));
   }
 
-  for (let index = 0; index < 96; index += 1) {
-    const angle = -Math.PI / 2 + (index / 96) * TAU;
-    const major = index % 8 === 0;
-    const medium = index % 4 === 0;
+  for (let index = 0; index < 12; index += 1) {
+    const angle = -Math.PI / 2 + (index / 12) * TAU;
+    const major = index % 3 === 0;
+    const medium = index % 2 === 0;
     const length = (major ? 8 : medium ? 5 : 3) * scale;
     const pointA = polarPoint(angle, trackOuter - length);
     const pointB = polarPoint(angle, trackOuter);
     addLine(nodes, D, pointA.x, pointA.y, pointB.x, pointB.y,
       Math.max(0.45, (major ? 1 : 0.7) * scale), major ? "#f0eee5" : "#8993ab", major ? 0.78 : 0.58);
-  }
-
-  const clockLabels = [["0h", 0], ["6h", 0.25], ["12h", 0.5], ["18h", 0.75]];
-  const clockFont = Math.max(4.6, 8 * scale);
-  for (const [label, fraction] of clockLabels) {
-    const angle = -Math.PI / 2 + fraction * TAU;
-    let rotation = angle + Math.PI / 2;
-    if (Math.cos(rotation) < 0) rotation += Math.PI;
-    const point = polarPoint(angle, trackRadius);
-    nodes.push(placeText(D, point.x, point.y, 15 * scale + 4, 8 * scale + 3, label, clockFont, "#f6e3bb", 0.98, rotation * RAD, "medium"));
   }
 
   for (const transition of timeRing.transitions) {
@@ -602,8 +592,8 @@ function buildTimeRing(D, radius, scale, timeRing, date) {
   const marker = polarPoint(markerAngle, trackRadius);
   const sunRadius = Math.max(1.1, 2.5 * scale);
   addDot(nodes, D, marker.x, marker.y, sunRadius * 2, "#ff292f", 1);
-  for (let ray = 0; ray < 8; ray += 1) {
-    const angle = markerAngle + ray * TAU / 8;
+  for (let ray = 0; ray < 4; ray += 1) {
+    const angle = markerAngle + ray * TAU / 4;
     const inner = polarPoint(angle, trackRadius + sunRadius + 0.4 * scale);
     const outer = polarPoint(angle, trackRadius + sunRadius + 3.2 * scale);
     addLine(nodes, D, inner.x, inner.y, outer.x, outer.y, Math.max(0.65, 1.6 * scale), "#ff292f", 1);
@@ -636,8 +626,10 @@ function buildSolarTermRing(D, radius, scale, date, bodies) {
     const middleAngle = angleAtLongitude((term.lon + 7.5) % 360);
     const start = polarPoint(startAngle, bandInner);
     const end = polarPoint(startAngle, bandOuter - 0.3 * scale);
-    addLine(nodes, D, start.x, start.y, end.x, end.y,
-      Math.max(0.42, 0.65 * scale), "#dab670", 0.52);
+    if (index % 3 === 0) {
+      addLine(nodes, D, start.x, start.y, end.x, end.y,
+        Math.max(0.42, 0.65 * scale), "#dab670", 0.52);
+    }
 
     if (index === currentIndex) {
       // Draw a short bright chord through the active term segment.
@@ -645,12 +637,10 @@ function buildSolarTermRing(D, radius, scale, date, bodies) {
       let b = endAngle;
       while (b - a > Math.PI) b -= TAU;
       while (b - a < -Math.PI) b += TAU;
-      for (let part = 0; part < 5; part += 1) {
-        const p1 = polarPoint(a + (b - a) * part / 5, bandMid);
-        const p2 = polarPoint(a + (b - a) * (part + 1) / 5, bandMid);
-        addLine(nodes, D, p1.x, p1.y, p2.x, p2.y,
-          Math.max(1.2, (bandWidth - scale) * 0.75), "#f5d68c", 0.34);
-      }
+      const p1 = polarPoint(a, bandMid);
+      const p2 = polarPoint(b, bandMid);
+      addLine(nodes, D, p1.x, p1.y, p2.x, p2.y,
+        Math.max(1.2, (bandWidth - scale) * 0.75), "#f5d68c", 0.34);
     }
 
     let textRotation = middleAngle + Math.PI / 2;
@@ -714,47 +704,47 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     : projectDate;
   const backgroundRotation = activePlanisphere ? activityBackgroundRotation(date) : 0;
 
-  // Layered circles approximate the website's blue radial sky gradient.
-  skyNodes.push(<circle frame={`${2 * innerRadius},${2 * innerRadius}`} color="#030817" />);
-  skyNodes.push(<circle frame={`${1.72 * innerRadius},${1.72 * innerRadius}`} color="#091736" opacity="0.92" />);
-  skyNodes.push(<circle frame={`${1.15 * innerRadius},${1.15 * innerRadius}`} color="#0e2045" opacity="0.62" />);
-
-  // Subtle deterministic dust grain from the website renderer.
-  const dustCount = D < 190 ? 92 : 170;
-  for (let index = 0; index < dustCount; index += 1) {
-    const angle = ((index * 137.508) % 360) * DEG;
-    const distance = Math.sqrt(((index * 47) % 997) / 997) * innerRadius * 0.98;
-    const x = Math.sin(angle) * distance;
-    const y = -Math.cos(angle) * distance;
-    const diameter = Math.max(0.55, (0.7 + ((index * 19) % 11) / 20) * scale * 1.4);
-    addDot(skyNodes, D, x, y, diameter, "#aebeee", 0.12 + ((index * 17) % 8) / 100);
+  if (activePlanisphere) {
+    const latitudeSign = CITY.lat >= 0 ? 1 : -1;
+    const limitDeclination = latitudeSign > 0
+      ? Math.max(-90, CITY.lat - 110)
+      : Math.min(90, CITY.lat + 110);
+    const backgroundScale = 180 / Math.abs(90 - limitDeclination);
+    const hemisphere = latitudeSign > 0 ? "north" : "south";
+    skyNodes.push(<image name={`image/sky-base-${hemisphere}.png`}
+      frame={`${2 * innerRadius * backgroundScale},${2 * innerRadius * backgroundScale}`} mode="fit" />);
+  } else {
+    // The local-sky widget keeps a small live vector layer around the brighter stars.
+    skyNodes.push(<circle frame={`${2 * innerRadius},${2 * innerRadius}`} color="#030817" />);
+    skyNodes.push(<circle frame={`${1.72 * innerRadius},${1.72 * innerRadius}`} color="#091736" opacity="0.92" />);
+    skyNodes.push(<circle frame={`${1.15 * innerRadius},${1.15 * innerRadius}`} color="#0e2045" opacity="0.62" />);
   }
 
   // Home uses the local altitude/azimuth grid. The activity dial uses the
   // web Watch polar projection with its matching curved horizon coordinates.
   const gridStep = D < 190 ? 30 : 15;
   if (activePlanisphere) {
-    for (let altitude = 15; altitude < 90; altitude += 15) {
+    for (const altitude of [30, 60]) {
       const path = [];
-      for (let azimuth = 0; azimuth <= 360; azimuth += gridStep) {
+      for (let azimuth = 0; azimuth < 360; azimuth += 45) {
         const eq = equatorialAtHorizontal(azimuth, altitude, date);
         path.push([eq.ra, eq.dec]);
       }
       addPolyline(gridNodes, D, path, projectDateBase, Math.max(0.34, 0.62 * scale), "#6a84ac", 0.30, 1, true);
     }
-    for (let azimuth = 0; azimuth < 360; azimuth += 15) {
+    for (let azimuth = 0; azimuth < 360; azimuth += 90) {
       const path = [];
-      const altitudeStep = D < 190 ? 10 : 5;
+      const altitudeStep = 15;
       for (let altitude = 0; altitude <= 90; altitude += altitudeStep) {
         const eq = equatorialAtHorizontal(azimuth, altitude, date);
         path.push([eq.ra, eq.dec]);
       }
-      addPolyline(gridNodes, D, path, projectDateBase, Math.max(0.34, 0.58 * scale), "#6a84ac", 0.27);
+      addPolyline(gridNodes, D, path, projectDateBase, Math.max(0.34, 0.58 * scale), "#6a84ac", 0.27, 2);
     }
   } else {
-    for (let altitude = 15; altitude < 90; altitude += 15) {
+    for (const altitude of [30, 60]) {
       const circleRadius = innerRadius * (1 - altitude / 90);
-      const steps = D < 190 ? 28 : 40;
+      const steps = 12;
       for (let index = 0; index < steps; index += 1) {
         const first = polarPoint((index / steps) * TAU, circleRadius);
         const second = polarPoint(((index + 1) / steps) * TAU, circleRadius);
@@ -762,7 +752,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
           Math.max(0.34, 0.62 * scale), "#6a84ac", 0.30);
       }
     }
-    for (let azimuth = 0; azimuth < 360; azimuth += 30) {
+    for (let azimuth = 0; azimuth < 360; azimuth += 90) {
       const angle = (-azimuth - 90) * DEG;
       const end = polarPoint(angle, innerRadius);
       addLine(gridNodes, D, 0, 0, end.x, end.y, Math.max(0.34, 0.58 * scale), "#6a84ac", 0.27);
@@ -770,65 +760,59 @@ function buildPlanisphereDial(D, date, bodies, mode) {
   }
 
   // Milky Way is a narrow, softly layered band, never a large filled polygon.
-  addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, projectSkyBase,
-    Math.max(1.2, 4.2 * scale), "#d9e8ff", 0.045, D < 190 ? 2 : 1);
-  addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, projectSkyBase,
-    Math.max(0.55, 1.4 * scale), "#eff5ff", 0.10, D < 190 ? 2 : 1);
+  if (!activePlanisphere) {
+    addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, projectSkyBase,
+      Math.max(1.2, 4.2 * scale), "#d9e8ff", 0.045, D < 190 ? 24 : 18);
+    addPolyline(galaxyNodes, D, MILKY_WAY_CENTERLINE, projectSkyBase,
+      Math.max(0.55, 1.4 * scale), "#eff5ff", 0.10, D < 190 ? 24 : 18);
+  }
 
   // Ecliptic and celestial equator use the web palette and real date precession.
-  const equator = [];
-  for (let ra = 0; ra <= 24; ra += 0.5) equator.push([ra % 24, 0]);
-  addPolyline(skyNodes, D, equator, projectSkyBase,
-    Math.max(0.48, 0.7 * scale), "#ef6868", 0.86, 1, true);
+  if (!activePlanisphere) {
+    const equator = [];
+    for (let ra = 0; ra <= 24; ra += 2) equator.push([ra % 24, 0]);
+    addPolyline(skyNodes, D, equator, projectSkyBase,
+      Math.max(0.48, 0.7 * scale), "#ef6868", 0.86, 1, true);
 
-  const ecliptic = [];
-  for (let longitude = 0; longitude <= 360; longitude += 5) {
-    const coordinates = eclipticToEquatorial(longitude, 0, meanObliquity(date));
-    ecliptic.push([coordinates.ra, coordinates.dec]);
-  }
-  addPolyline(skyNodes, D, ecliptic, projectDateBase,
-    Math.max(0.72, 1.4 * scale), "#f2c36c", 0.86, 1, true);
-
-  const horizonNodes = [];
-  if (activePlanisphere) {
-    const horizon = [];
-    for (let azimuth = 0; azimuth <= 360; azimuth += 3) {
-      const eq = equatorialAtHorizontal(azimuth, 0, date);
-      horizon.push([eq.ra, eq.dec]);
+    const ecliptic = [];
+    for (let longitude = 0; longitude <= 360; longitude += 30) {
+      const coordinates = eclipticToEquatorial(longitude, 0, meanObliquity(date));
+      ecliptic.push([coordinates.ra, coordinates.dec]);
     }
-    addPolyline(horizonNodes, D, horizon, projectDateBase, Math.max(0.55, 0.9 * scale), "#f5f5f5", 0.88, 1, true);
+    addPolyline(skyNodes, D, ecliptic, projectDateBase,
+      Math.max(0.72, 1.4 * scale), "#f2c36c", 0.86, 1, true);
   }
+
+  // The circular chart rim already marks the horizon edge; its light border
+  // is part of the clipped base circle, so no segmented horizon is needed.
+  const horizonNodes = [];
 
   // Constellation boundary lines and connecting lines from the repository data.
-  for (let conIndex = 0; conIndex < CONSTELLATIONS.length; conIndex += 1) {
+  for (let conIndex = 0; !activePlanisphere && conIndex < Math.min(CONSTELLATIONS.length, 6); conIndex += 1) {
     const constellation = CONSTELLATIONS[conIndex];
-    const boundaryStep = D < 190 ? 2 : 1;
-    for (const boundary of constellation.boundaryParts) {
-      addPolyline(boundaryNodes, D, boundary, projectSkyBase,
-        Math.max(0.34, 0.46 * scale), "#91aacf", 0.30, boundaryStep);
-    }
-    const lineSkip = D < 190 && conIndex % 2 === 1;
-    if (!lineSkip) {
-      for (const line of constellation.lines) {
-        addPolyline(constellationNodes, D, line, projectSkyBase,
-          Math.max(0.36, 0.52 * scale), "#7ac7d6", 0.43, D < 190 ? 2 : 1);
-      }
+    const line = constellation.lines[0];
+    if (line) {
+      addPolyline(constellationNodes, D, line, projectSkyBase,
+        Math.max(0.36, 0.52 * scale), "#7ac7d6", 0.43, D < 190 ? 4 : 2);
     }
   }
 
   // Real stars; keep more depth on the large family and compact the tiny family.
-  const starLimit = D < 190 ? 4.0 : 4.9;
+  const starLimit = activePlanisphere ? -1 : (D < 190 ? 1.3 : 1.8);
+  let renderedStars = 0;
   for (const star of STARS) {
     if (star.magnitude > starLimit) continue;
     const point = projectSkyBase(star.ra, star.dec);
     const labelPoint = projectStar(star.ra, star.dec);
     if (!point) continue;
+    if (!activePlanisphere && renderedStars >= (D < 190 ? 10 : 16)) continue;
+    renderedStars += 1;
     const diameter = clamp((2.0 + (3.6 - star.magnitude) * 1.2) * scale, 0.7, 3.8 * scale);
     const color = star.tone === "warm" ? "#ffd596" : star.tone === "blue" ? "#c9dcff" : "#f5f0df";
     const alpha = clamp(1.02 - star.magnitude / 7, 0.42, 1);
     if (star.magnitude <= 1.4) addDot(starNodes, D, point.x, point.y, diameter * 3.2, color, 0.10);
     addDot(starNodes, D, point.x, point.y, diameter, color, alpha);
-    if (star.magnitude <= 1.2 && star.name && labelPoint) {
+    if (star.magnitude <= 0.8 && star.name && labelPoint) {
       labelNodes.push(placeText(D, labelPoint.x + 6 * scale, labelPoint.y - 3 * scale, 24 * scale + 3, 8 * scale + 2,
         star.name, Math.max(4.5, 8 * scale), "#f0eee5", 0.74, 0, "regular"));
     }
@@ -863,7 +847,9 @@ function buildPlanisphereDial(D, date, bodies, mode) {
   }
 
   // Constellation names remain faint, matching the web Watch linework.
-  for (const constellation of CONSTELLATIONS) {
+  for (let constellationIndex = 0; constellationIndex < (activePlanisphere ? 16 : 6); constellationIndex += 1) {
+    const constellation = CONSTELLATIONS[constellationIndex];
+    if (!constellation) continue;
     for (const [ra, dec] of constellation.labels) {
       const point = projectStar(ra, dec);
       if (!point) continue;
