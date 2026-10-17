@@ -1,4 +1,4 @@
-import { DEG, TAU, clamp, eclipticToEquatorial, equatorialOfDateToHorizontal, equatorialToHorizontal, localSiderealHours, planetaryBodies } from "../../src/astro.js";
+import { DEG, TAU, clamp, eclipticToEquatorial, equatorialOfDateToHorizontal, equatorialToHorizontal, localSiderealHours, planetaryBodies, solarAltitude } from "../../src/astro.js";
 import { CONSTELLATIONS } from "../../src/data/constellations.js";
 import { MILKY_WAY_RINGS } from "../../src/data/milkyWay.js";
 import { STARS } from "../../src/data/stars.js";
@@ -9,9 +9,17 @@ const status = document.querySelector("#watch-status");
 const cityId = new URLSearchParams(window.location.search).get("city") || "beijing";
 const city = CITY_BY_ID.get(cityId) || CITY_BY_ID.get("beijing");
 const ctx = canvas.getContext("2d");
-const state = { date: new Date(), latitudeSign: city.lat >= 0 ? 1 : -1 };
+const state = { date: new Date(), latitudeSign: city.lat >= 0 ? 1 : -1, timeRing: null };
 const WATCH_ROTATION = 90 * DEG;
 let metrics = null;
+let timeRingCacheKey = "";
+
+const TWILIGHT_BANDS = [
+  { id: "standard", low: -0.833, high: 0 },
+  { id: "civil", low: -6, high: -0.833 },
+  { id: "nautical", low: -12, high: -6 },
+  { id: "astronomical", low: -18, high: -12 },
+];
 
 const COLORS = {
   ink: "#f5f0df",
@@ -36,6 +44,55 @@ function resize() {
 
 function declinationLimit() {
   return city.lat >= 0 ? Math.max(-90, city.lat - 90 - 20) : Math.min(90, city.lat + 90 + 20);
+}
+
+function localDayBounds(date) {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  return { start, end, span: end.getTime() - start.getTime() };
+}
+
+function skyStateAt(date) {
+  const altitude = solarAltitude(date, city.lat, city.lon);
+  if (altitude >= 0) return "day";
+  const twilight = TWILIGHT_BANDS.find(({ low, high }) => altitude >= low && altitude < high);
+  if (twilight) return twilight.id;
+  const moon = planetaryBodies(date, city.lat, city.lon).find((body) => body.id === "moon");
+  return moon && moon.horizontal.altitude > 0 && moon.illumination >= 0.08 ? "moon" : "night";
+}
+
+function calculateTimeRing(date) {
+  const { start, end, span } = localDayBounds(date);
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  const sampleStep = 60 * 1000;
+  const segments = [];
+  let previousState = null;
+  let previousStart = 0;
+  for (let time = startMs; time < endMs; time += sampleStep) {
+    const nextTime = Math.min(time + sampleStep, endMs);
+    const middle = new Date((time + nextTime) / 2);
+    const currentState = skyStateAt(middle);
+    const currentStart = (time - startMs) / span;
+    const currentEnd = (nextTime - startMs) / span;
+    if (currentState !== previousState) {
+      if (previousState !== null) segments.push({ id: previousState, start: previousStart, end: currentStart });
+      previousState = currentState;
+      previousStart = currentStart;
+    }
+    if (nextTime === endMs) segments.push({ id: currentState, start: previousStart, end: currentEnd });
+  }
+  return { startMs, endMs, span, segments, timeFraction: 0 };
+}
+
+function ensureTimeRing() {
+  const { start, end } = localDayBounds(state.date);
+  const key = `${start.toISOString()}|${end.toISOString()}|${city.lat}|${city.lon}`;
+  if (key !== timeRingCacheKey) {
+    state.timeRing = calculateTimeRing(state.date);
+    timeRingCacheKey = key;
+  }
+  state.timeRing.timeFraction = Math.min(1, Math.max(0, (state.date.getTime() - state.timeRing.startMs) / state.timeRing.span));
 }
 
 function projectHourAngle(hourAngle, normalized) {
@@ -207,20 +264,88 @@ function drawCompassDirections() {
   ctx.restore();
 }
 
-function drawBezel() {
-  const { cx, cy, radius } = metrics; ctx.save();
-  ctx.strokeStyle = "rgba(218,182,112,.85)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, radius + 3, 0, TAU); ctx.stroke();
-  ctx.strokeStyle = "rgba(217,182,110,.38)"; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(cx, cy, radius + 10, 0, TAU); ctx.stroke();
-  for (let index = 0; index < 72; index += 1) {
-    const angle = -Math.PI / 2 + index / 72 * TAU; const length = index % 6 === 0 ? 10 : index % 3 === 0 ? 6 : 3;
-    ctx.strokeStyle = index % 6 === 0 ? "rgba(240,224,178,.9)" : "rgba(154,174,204,.6)"; ctx.lineWidth = 1; ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(angle) * (radius + 13 - length), cy + Math.sin(angle) * (radius + 13 - length)); ctx.lineTo(cx + Math.cos(angle) * (radius + 13), cy + Math.sin(angle) * (radius + 13)); ctx.stroke();
+function drawTimeRing() {
+  const { cx, cy, radius } = metrics;
+  const time = radius + 4;
+  const timeOuter = radius + 12;
+  const colors = {
+    day: "#f4f1df",
+    standard: "#f6e2b4",
+    civil: "#f2c36c",
+    nautical: "#79aeea",
+    astronomical: "#d59af4",
+    moon: "#9bcdf7",
+    night: "#1b335e",
+  };
+  const labels = {
+    standard: "标准",
+    civil: "民用",
+    nautical: "航海",
+    astronomical: "天文",
+    moon: "月照",
+    night: "无月",
+  };
+
+  ctx.save();
+  ctx.lineCap = "butt";
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = colors.night;
+  ctx.beginPath();
+  ctx.arc(cx, cy, time, 0, TAU);
+  ctx.stroke();
+  for (const segment of state.timeRing?.segments ?? []) {
+    if (segment.end - segment.start < 0.00001) continue;
+    const startAngle = -Math.PI / 2 + segment.start * TAU;
+    const endAngle = -Math.PI / 2 + segment.end * TAU;
+    ctx.strokeStyle = colors[segment.id] ?? colors.night;
+    ctx.beginPath();
+    ctx.arc(cx, cy, time, startAngle, endAngle);
+    ctx.stroke();
+    const label = labels[segment.id];
+    if (label && segment.end - segment.start > 0.035) {
+      const middle = (segment.start + segment.end) / 2;
+      const labelAngle = -Math.PI / 2 + middle * TAU;
+      const labelRadius = timeOuter + 1;
+      const labelX = cx + Math.cos(labelAngle) * labelRadius;
+      const labelY = cy + Math.sin(labelAngle) * labelRadius;
+      ctx.fillStyle = colors[segment.id] ?? colors.night;
+      ctx.font = "8px Segoe UI,sans-serif";
+      ctx.textAlign = labelX < cx ? "right" : "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, labelX, labelY);
+    }
   }
-  ctx.fillStyle = COLORS.ink; ctx.font = "10px Segoe UI,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  for (const [label, fraction] of [["0h",0],["6h",.25],["12h",.5],["18h",.75]]) { const angle = -Math.PI / 2 + fraction * TAU; const distance = radius + 28; ctx.fillText(label, cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance); }
-  const fraction = localSiderealHours(state.date, city.lon) / 24; const angle = -Math.PI / 2 + fraction * TAU;
-  ctx.strokeStyle = COLORS.goldBright; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx + Math.cos(angle) * (radius + 2), cy + Math.sin(angle) * (radius + 2)); ctx.lineTo(cx + Math.cos(angle) * (radius + 19), cy + Math.sin(angle) * (radius + 19)); ctx.stroke();
-  ctx.font = "10px Segoe UI,sans-serif"; ctx.fillStyle = COLORS.gold; ctx.fillText("PLANISPHERE", cx, cy - radius - 35); ctx.fillStyle = COLORS.muted; ctx.fillText(city.name, cx, cy + radius + 36);
+
+  for (let index = 0; index < 96; index += 1) {
+    const fraction = index / 96;
+    const angle = -Math.PI / 2 + fraction * TAU;
+    const length = index % 4 === 0 ? 8 : index % 2 === 0 ? 5 : 3;
+    const inner = timeOuter - length;
+    ctx.strokeStyle = index % 4 === 0 ? "rgba(240,238,229,.78)" : "rgba(137,147,171,.6)";
+    ctx.lineWidth = index % 4 === 0 ? 1 : .7;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+    ctx.lineTo(cx + Math.cos(angle) * timeOuter, cy + Math.sin(angle) * timeOuter);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "rgba(216,196,142,.86)";
+  ctx.font = "9px Segoe UI,sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (const [label, fraction] of [["0h", 0], ["6h", .25], ["12h", .5], ["18h", .75]]) {
+    const angle = -Math.PI / 2 + fraction * TAU;
+    const distance = timeOuter - 1;
+    ctx.fillText(label, cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance);
+  }
+
+  const markerAngle = -Math.PI / 2 + state.timeRing.timeFraction * TAU;
+  ctx.strokeStyle = "#f2c36c";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.cos(markerAngle) * (time - 6), cy + Math.sin(markerAngle) * (time - 6));
+  ctx.lineTo(cx + Math.cos(markerAngle) * (timeOuter + 7), cy + Math.sin(markerAngle) * (timeOuter + 7));
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -230,12 +355,13 @@ function drawPole() {
 
 function render() {
   if (!resize()) return;
+  ensureTimeRing();
   ctx.clearRect(0, 0, metrics.width, metrics.height);
   drawBackground();
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
   drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies();
   ctx.restore();
-  drawHorizonBoundary(); drawCompassDirections(); drawBezel(); drawPole();
+  drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
 }
 
