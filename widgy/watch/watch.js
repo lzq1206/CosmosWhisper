@@ -53,7 +53,7 @@ function resize() {
   canvas.height = Math.round(rect.height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const edge = Math.min(rect.width, rect.height);
-  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: Math.max(1, edge / 2 - 26) };
+  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: Math.max(1, edge / 2 - 30) };
   return true;
 }
 
@@ -363,7 +363,7 @@ function drawCompassDirections() {
 
 function drawTimeRing() {
   const { cx, cy, radius } = metrics;
-  const time = radius + 18;
+  const time = radius + 22;
   const timeOuter = time + 4;
   const colors = {
     day: "#f4f1df",
@@ -439,19 +439,35 @@ function drawTimeRing() {
   }
 
   const markerAngle = -Math.PI / 2 + state.timeRing.timeFraction * TAU;
-  ctx.strokeStyle = "#f2c36c";
-  ctx.lineWidth = 1.2;
+  const markerX = cx + Math.cos(markerAngle) * time;
+  const markerY = cy + Math.sin(markerAngle) * time;
+  ctx.save();
+  ctx.translate(markerX, markerY);
+  ctx.rotate(markerAngle);
+  ctx.strokeStyle = "#ffe6a6";
+  ctx.fillStyle = "#ffd675";
+  ctx.lineWidth = 1.35;
+  ctx.lineCap = "round";
+  ctx.shadowColor = "rgba(255, 211, 116, .85)";
+  ctx.shadowBlur = 4;
   ctx.beginPath();
-  ctx.moveTo(cx + Math.cos(markerAngle) * (time - 3.2), cy + Math.sin(markerAngle) * (time - 3.2));
-  ctx.lineTo(cx + Math.cos(markerAngle) * (time + 3.2), cy + Math.sin(markerAngle) * (time + 3.2));
-  ctx.stroke();
+  ctx.arc(0, 0, 1.8, 0, TAU);
+  ctx.fill();
+  for (let ray = 0; ray < 8; ray += 1) {
+    const angle = ray * TAU / 8;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * 3.1, Math.sin(angle) * 3.1);
+    ctx.lineTo(Math.cos(angle) * 5.4, Math.sin(angle) * 5.4);
+    ctx.stroke();
+  }
+  ctx.restore();
   ctx.restore();
 }
 
 function drawSolarTermRing() {
   const { cx, cy, radius } = metrics;
   const lst = localSiderealHours(state.date, city.lon);
-  const termBandWidth = 12;
+  const termBandWidth = 16;
   const termMidRadius = radius + termBandWidth / 2 + 1;
   const termOuterRadius = radius + termBandWidth + 1;
   const currentTerm = Math.floor(solarLongitude(state.date) / 15) % SOLAR_TERMS.length;
@@ -511,7 +527,7 @@ function drawSolarTermRing() {
     if (Math.sin(middleAngle) > 0) rotation += Math.PI;
     ctx.rotate(rotation);
     ctx.fillStyle = index === currentTerm ? COLORS.goldBright : "rgba(210,220,235,.82)";
-    ctx.font = "10px Segoe UI,sans-serif";
+    ctx.font = "11px Segoe UI,sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(term.name, 0, 0);
@@ -520,19 +536,29 @@ function drawSolarTermRing() {
 
   const sun = solarEquatorial(state.date);
   const sunAngle = angleForRightAscension(sun.ra);
-  const needleTipRadius = termMidRadius + 1.8;
-  const tipX = cx + Math.cos(sunAngle) * needleTipRadius;
-  const tipY = cy + Math.sin(sunAngle) * needleTipRadius;
-  ctx.strokeStyle = COLORS.goldBright;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(cx + Math.cos(sunAngle) * (radius + 1.6), cy + Math.sin(sunAngle) * (radius + 1.6));
-  ctx.lineTo(tipX, tipY);
-  ctx.stroke();
+  const radialX = Math.cos(sunAngle);
+  const radialY = Math.sin(sunAngle);
+  const tangentX = -radialY;
+  const tangentY = radialX;
+  const tipRadius = radius + 6.2;
+  const baseRadius = radius + .2;
+  const halfBase = 4.2;
+  const tipX = cx + radialX * tipRadius;
+  const tipY = cy + radialY * tipRadius;
+  const baseLeftX = cx + radialX * baseRadius + tangentX * halfBase;
+  const baseLeftY = cy + radialY * baseRadius + tangentY * halfBase;
+  const baseRightX = cx + radialX * baseRadius - tangentX * halfBase;
+  const baseRightY = cy + radialY * baseRadius - tangentY * halfBase;
   ctx.fillStyle = COLORS.goldBright;
+  ctx.strokeStyle = "rgba(5,16,35,.95)";
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(tipX, tipY, 1.1, 0, TAU);
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(baseLeftX, baseLeftY);
+  ctx.lineTo(baseRightX, baseRightY);
+  ctx.closePath();
   ctx.fill();
+  ctx.stroke();
   ctx.restore();
 }
 
