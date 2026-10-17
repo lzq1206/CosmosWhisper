@@ -233,12 +233,77 @@ function drawStars() {
   }
 }
 
+function drawMoonPhase(point, moon, sunPoint) {
+  const radius = moon.size * 1.35;
+  const illumination = clamp(moon.illumination, 0, 1);
+  const sunAngle = sunPoint
+    ? Math.atan2(sunPoint.y - point.y, sunPoint.x - point.x)
+    : 0;
+
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.fillStyle = "rgba(8,18,38,.96)";
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, TAU);
+  ctx.fill();
+
+  if (illumination >= .995) {
+    ctx.fillStyle = moon.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, TAU);
+    ctx.fill();
+  } else if (illumination > .005) {
+    const terminator = (1 - 2 * illumination) / (2 * Math.sqrt(illumination * (1 - illumination)));
+    ctx.save();
+    ctx.rotate(sunAngle);
+    ctx.beginPath();
+    for (let step = 0; step <= 32; step += 1) {
+      const y = -radius + (2 * radius * step) / 32;
+      const halfWidth = Math.sqrt(Math.max(0, radius * radius - y * y));
+      const x = clamp(terminator * halfWidth, -halfWidth, halfWidth);
+      if (step === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.arc(0, 0, radius, Math.PI / 2, -Math.PI / 2, true);
+    ctx.closePath();
+    ctx.fillStyle = moon.color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.strokeStyle = "rgba(216,231,255,.45)";
+  ctx.lineWidth = .7;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, TAU);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawBodies() {
-  for (const body of planetaryBodies(state.date, city.lat, city.lon)) {
+  const bodies = planetaryBodies(state.date, city.lat, city.lon);
+  const sun = bodies.find((body) => body.id === "sun");
+  const sunPoint = sun ? projectOfDate(sun.ra, sun.dec) : null;
+  for (const body of bodies) {
     const point = projectOfDate(body.ra, body.dec); if (!point) continue;
-    ctx.fillStyle = body.color; ctx.beginPath(); ctx.arc(point.x, point.y, body.size, 0, TAU); ctx.fill();
+    if (body.id === "moon") drawMoonPhase(point, body, sunPoint);
+    else { ctx.fillStyle = body.color; ctx.beginPath(); ctx.arc(point.x, point.y, body.size, 0, TAU); ctx.fill(); }
     ctx.fillStyle = body.color; ctx.font = "9px Segoe UI,sans-serif"; ctx.fillText(body.name, point.x + body.size + 3, point.y - body.size - 2);
   }
+}
+
+function drawConstellationLabels() {
+  ctx.save();
+  ctx.fillStyle = COLORS.boundary;
+  ctx.font = "10px Segoe UI,sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (const constellation of CONSTELLATIONS) {
+    for (const [ra, dec] of constellation.labels) {
+      const point = projectEquatorial(ra, dec);
+      if (point) ctx.fillText(constellation.name, point.x, point.y);
+    }
+  }
+  ctx.restore();
 }
 
 function horizonEquatorialAtAzimuth(azimuthDegrees, lst) {
@@ -271,7 +336,6 @@ function drawHorizonBoundary() {
 
 function drawCompassDirections() {
   ctx.save();
-  ctx.font = "bold 12px Segoe UI,sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
@@ -279,7 +343,12 @@ function drawCompassDirections() {
   ctx.strokeStyle = "rgba(3,8,23,.96)";
   ctx.fillStyle = COLORS.goldBright;
   const lst = localSiderealHours(state.date, city.lon);
-  for (const [label, azimuth] of [["北", 0], ["东", 90], ["南", 180], ["西", 270]]) {
+  const directions = [
+    ["北", 0, 12], ["东北", 45, 10], ["东", 90, 12], ["东南", 135, 10],
+    ["南", 180, 12], ["西南", 225, 10], ["西", 270, 12], ["西北", 315, 10],
+  ];
+  for (const [label, azimuth, fontSize] of directions) {
+    ctx.font = `bold ${fontSize}px Segoe UI,sans-serif`;
     const [ra, dec] = horizonEquatorialAtAzimuth(azimuth, lst);
     const point = projectOfDate(ra, dec);
     if (!point) continue;
@@ -471,7 +540,7 @@ function render() {
   ctx.clearRect(0, 0, metrics.width, metrics.height);
   drawBackground();
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
-  drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies();
+  drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies(); drawConstellationLabels();
   ctx.restore();
   drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawSolarTermRing(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
