@@ -42,7 +42,7 @@ const COLORS = {
   gold: "#dcb870",
   goldBright: "#f5d68c",
   line: "rgba(122, 199, 214, .82)",
-  boundary: "rgba(7, 25, 52, .16)",
+  boundary: "rgba(7, 25, 52, .68)",
 };
 
 function resize() {
