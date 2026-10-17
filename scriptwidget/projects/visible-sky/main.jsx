@@ -69,13 +69,22 @@ if (!CITY) {
   const refreshVersion = Math.floor((Date.now() - 5 * 60 * 1000) / 900000);
   const imageURL = "https://raw.githubusercontent.com/lzq1206/CosmosWhisper/widget-snapshots/"
     + imageDirectory + "/" + CITY.id + ".jpg?v=" + refreshVersion;
+  let imageSource = imageURL;
+  if (imageKind === "visible-sky" && isLargeFamily && typeof $fetch === "function") {
+    try {
+      const imageData = await $fetch(imageURL, { timeoutInterval: 10, responseType: "base64" });
+      if (typeof imageData === "string" && imageData.length > 0) {
+        imageSource = "data:image/jpeg;base64," + imageData;
+      }
+    } catch (error) {}
+  }
 
   // The tall large-family asset fills the widget while preserving the round dial.
   const imageMode = isSmallFamily || isLargeFamily ? "fill" : "fit";
   $render(
     <zstack frame="max" alignment="center" background="#030817">
       <image
-        url={imageURL}
+        url={imageSource}
         frame="max"
         mode={imageMode}
         clip="rect"
