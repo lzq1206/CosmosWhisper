@@ -1,4 +1,4 @@
-import { DEG, TAU, clamp, eclipticToEquatorial, equatorialOfDateToHorizontal, equatorialToHorizontal, localSiderealHours, planetaryBodies, solarAltitude } from "../../src/astro.js";
+import { DEG, TAU, centuriesSinceJ2000, clamp, eclipticToEquatorial, equatorialOfDateToHorizontal, equatorialToHorizontal, localSiderealHours, planetaryBodies, solarAltitude, solarEquatorial } from "../../src/astro.js";
 import { CONSTELLATIONS } from "../../src/data/constellations.js";
 import { MILKY_WAY_RINGS } from "../../src/data/milkyWay.js";
 import { STARS } from "../../src/data/stars.js";
@@ -21,13 +21,28 @@ const TWILIGHT_BANDS = [
   { id: "astronomical", low: -18, high: -12 },
 ];
 
+const SOLAR_TERMS = [
+  { longitude: 0, name: "春分" }, { longitude: 15, name: "清明" },
+  { longitude: 30, name: "谷雨" }, { longitude: 45, name: "立夏" },
+  { longitude: 60, name: "小满" }, { longitude: 75, name: "芒种" },
+  { longitude: 90, name: "夏至" }, { longitude: 105, name: "小暑" },
+  { longitude: 120, name: "大暑" }, { longitude: 135, name: "立秋" },
+  { longitude: 150, name: "处暑" }, { longitude: 165, name: "白露" },
+  { longitude: 180, name: "秋分" }, { longitude: 195, name: "寒露" },
+  { longitude: 210, name: "霜降" }, { longitude: 225, name: "立冬" },
+  { longitude: 240, name: "小雪" }, { longitude: 255, name: "大雪" },
+  { longitude: 270, name: "冬至" }, { longitude: 285, name: "小寒" },
+  { longitude: 300, name: "大寒" }, { longitude: 315, name: "立春" },
+  { longitude: 330, name: "雨水" }, { longitude: 345, name: "惊蛰" },
+];
+
 const COLORS = {
   ink: "#f5f0df",
   muted: "#9ba9bf",
   gold: "#dcb870",
   goldBright: "#f5d68c",
   line: "rgba(122, 199, 214, .82)",
-  boundary: "rgba(220, 157, 166, .48)",
+  boundary: "rgba(7, 25, 52, .16)",
 };
 
 function resize() {
@@ -38,7 +53,7 @@ function resize() {
   canvas.height = Math.round(rect.height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const edge = Math.min(rect.width, rect.height);
-  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: edge / 2 - 20 };
+  metrics = { width: rect.width, height: rect.height, cx: rect.width / 2, cy: rect.height / 2, radius: Math.max(1, edge / 2 - 32) };
   return true;
 }
 
@@ -93,6 +108,16 @@ function ensureTimeRing() {
     timeRingCacheKey = key;
   }
   state.timeRing.timeFraction = Math.min(1, Math.max(0, (state.date.getTime() - state.timeRing.startMs) / state.timeRing.span));
+}
+
+function solarLongitude(date) {
+  const centuries = centuriesSinceJ2000(date);
+  const meanLongitude = 280.46646 + 36000.76983 * centuries + 0.0003032 * centuries ** 2;
+  const meanAnomaly = (357.52911 + 35999.05029 * centuries - 0.0001537 * centuries ** 2) * DEG;
+  const center = (1.914602 - 0.004817 * centuries - 0.000014 * centuries ** 2) * Math.sin(meanAnomaly)
+    + (0.019993 - 0.000101 * centuries) * Math.sin(2 * meanAnomaly)
+    + 0.000289 * Math.sin(3 * meanAnomaly);
+  return ((meanLongitude + center) % 360 + 360) % 360;
 }
 
 function projectHourAngle(hourAngle, normalized) {
@@ -266,8 +291,8 @@ function drawCompassDirections() {
 
 function drawTimeRing() {
   const { cx, cy, radius } = metrics;
-  const time = radius + 4;
-  const timeOuter = radius + 12;
+  const time = radius + 16;
+  const timeOuter = radius + 24;
   const colors = {
     day: "#f4f1df",
     standard: "#f6e2b4",
@@ -349,6 +374,93 @@ function drawTimeRing() {
   ctx.restore();
 }
 
+function drawSolarTermRing() {
+  const { cx, cy, radius } = metrics;
+  const lst = localSiderealHours(state.date, city.lon);
+  const termBandWidth = 8;
+  const termMidRadius = radius + termBandWidth / 2 + 1;
+  const termOuterRadius = radius + termBandWidth + 1;
+  const currentTerm = Math.floor(solarLongitude(state.date) / 15) % SOLAR_TERMS.length;
+  const angleForRightAscension = (ra) => WATCH_ROTATION
+    - (lst - ra) * state.latitudeSign * 15 * DEG;
+
+  ctx.save();
+  ctx.lineCap = "butt";
+  ctx.strokeStyle = "rgba(12,28,56,.92)";
+  ctx.lineWidth = termBandWidth;
+  ctx.beginPath();
+  ctx.arc(cx, cy, termMidRadius, 0, TAU);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(218,182,112,.72)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 1, 0, TAU);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(218,182,112,.5)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, termOuterRadius, 0, TAU);
+  ctx.stroke();
+
+  for (let index = 0; index < SOLAR_TERMS.length; index += 1) {
+    const term = SOLAR_TERMS[index];
+    const nextTerm = SOLAR_TERMS[(index + 1) % SOLAR_TERMS.length];
+    const middleLongitude = (term.longitude + 7.5) % 360;
+    const termEquatorial = eclipticToEquatorial(term.longitude, state.date);
+    const nextEquatorial = eclipticToEquatorial(nextTerm.longitude, state.date);
+    const middleEquatorial = eclipticToEquatorial(middleLongitude, state.date);
+    const angle = angleForRightAscension(termEquatorial.ra);
+    const nextAngle = angleForRightAscension(nextEquatorial.ra);
+    const middleAngle = angleForRightAscension(middleEquatorial.ra);
+
+    if (index === currentTerm) {
+      ctx.strokeStyle = "rgba(245,214,140,.36)";
+      ctx.lineWidth = termBandWidth - 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, termMidRadius, angle, nextAngle, state.latitudeSign < 0);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "rgba(218,182,112,.48)";
+    ctx.lineWidth = .75;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * (radius + 1), cy + Math.sin(angle) * (radius + 1));
+    ctx.lineTo(cx + Math.cos(angle) * termOuterRadius, cy + Math.sin(angle) * termOuterRadius);
+    ctx.stroke();
+
+    const labelX = cx + Math.cos(middleAngle) * termMidRadius;
+    const labelY = cy + Math.sin(middleAngle) * termMidRadius;
+    ctx.save();
+    ctx.translate(labelX, labelY);
+    let rotation = middleAngle + Math.PI / 2;
+    if (Math.sin(middleAngle) > 0) rotation += Math.PI;
+    ctx.rotate(rotation);
+    ctx.fillStyle = index === currentTerm ? COLORS.goldBright : "rgba(210,220,235,.82)";
+    ctx.font = "8px Segoe UI,sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(term.name, 0, 0);
+    ctx.restore();
+  }
+
+  const sun = solarEquatorial(state.date);
+  const sunAngle = angleForRightAscension(sun.ra);
+  const needleTipRadius = termOuterRadius + 2;
+  const tipX = cx + Math.cos(sunAngle) * needleTipRadius;
+  const tipY = cy + Math.sin(sunAngle) * needleTipRadius;
+  ctx.strokeStyle = COLORS.goldBright;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.cos(sunAngle) * (radius + 1), cy + Math.sin(sunAngle) * (radius + 1));
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+  ctx.fillStyle = COLORS.goldBright;
+  ctx.beginPath();
+  ctx.arc(tipX, tipY, 2, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawPole() {
   ctx.save(); ctx.fillStyle = COLORS.goldBright; ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, 5, 0, TAU); ctx.fill(); ctx.strokeStyle = "rgba(245,214,140,.65)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, 13, 0, TAU); ctx.stroke(); ctx.fillStyle = COLORS.ink; ctx.font = "10px Segoe UI,sans-serif"; ctx.textAlign = "center"; ctx.fillText("北极点", metrics.cx, metrics.cy + 28); ctx.restore();
 }
@@ -361,7 +473,7 @@ function render() {
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
   drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies();
   ctx.restore();
-  drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawPole();
+  drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawSolarTermRing(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
 }
 
