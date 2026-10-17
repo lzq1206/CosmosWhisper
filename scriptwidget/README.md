@@ -3,7 +3,7 @@
 - exports/visible-sky.swt — 可见天区版
 - exports/active-planisphere.swt — 活动星盘版
 
-星盘底图直接使用对应网页城市页面的截图，按填充模式铺满小组件并外扩以覆盖系统内容边距。GitHub Actions 在页面画布加载后等待 5 秒，并每 15 分钟更新每个城市的可见天区和 Watch 星盘图片。小组件按设备定位选择最近城市，只额外绘制中央三针；指针使用 ScriptWidget 原生 clockHour、clockMinute、clockSecond 动画，并围绕表盘中心旋转。
+星盘底图直接使用对应网页城市页面的截图。截图在网页画布加载后等待 5 秒，并每 15 分钟更新每个城市的可见天区和 Watch 星盘图片。小组件按设备定位选择最近城市，只额外绘制中央三针；指针按 ScriptWidget 官方 Animation Clock 示例结构绘制，使用 clockHour、clockMinute、clockSecond 原生时钟效果，并围绕表盘中心旋转。底图不再外扩，横向小组件适配完整圆盘，确保圆环不越过边界。
 
 导入时需要允许 ScriptWidget 访问定位和 raw.githubusercontent.com 网络图片。截图发布计划为每 15 分钟一次，WidgetKit 对组件本身的刷新由 ScriptWidget 和系统调度，不保证严格每 15 分钟显示刷新。
 

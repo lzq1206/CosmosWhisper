@@ -1,7 +1,7 @@
 /**
  * CosmosWhisper ScriptWidget packages.
  * The dial image is captured from the matching city page every 15 minutes.
- * Full-bleed city screenshot with native WidgetKit rotation on centered hands.
+ * City screenshot with contained bounds and ScriptWidget's native clock hands.
  */
 const PACKAGE_KIND = "__PACKAGE_KIND__";
 const CITY_CATALOG = __CITY_CATALOG__;
@@ -61,44 +61,50 @@ if (!CITY) {
   const family = typeof $getenv === "function"
     ? String($getenv("widget-size") || "systemLarge").toLowerCase()
     : "systemLarge";
-  const bleed = 16;
-  const baseDialSize = family.includes("small") ? 148 : 332;
-  const dialSize = baseDialSize + bleed * 2;
-  const hourLength = Math.round(dialSize * 0.14);
-  const minuteLength = Math.round(dialSize * 0.22);
-  const secondLength = Math.round(dialSize * 0.30);
-  const hourWidth = Math.max(0.7, dialSize * 0.0042).toFixed(2);
-  const minuteWidth = Math.max(0.7, dialSize * 0.0030).toFixed(2);
-  const secondWidth = Math.max(0.7, dialSize * 0.0019).toFixed(2);
+  const baseDialSize = family.includes("small")
+    ? 148
+    : family.includes("medium")
+      ? 142
+      : 332;
+  const dialSize = baseDialSize;
+  // Match the official sample's hand lengths while keeping the detailed dial's hands fine.
+  const hourLength = Math.round(dialSize * (28 / 112));
+  const minuteLength = Math.round(dialSize * (38 / 112));
+  const secondLength = Math.round(dialSize * (46 / 112));
+  const hourWidth = Math.max(0.8, dialSize * 0.0050).toFixed(2);
+  const minuteWidth = Math.max(0.65, dialSize * 0.0037).toFixed(2);
+  const secondWidth = Math.max(0.5, dialSize * 0.0024).toFixed(2);
   const imageKind = PACKAGE_KIND === "visible-sky" ? "visible-sky" : "active-planisphere";
   // Give the scheduled screenshot job a few minutes to publish before the URL cache key changes.
   const refreshVersion = Math.floor((Date.now() - 5 * 60 * 1000) / 900000);
   const imageURL = "https://raw.githubusercontent.com/lzq1206/CosmosWhisper/widget-snapshots/"
     + imageKind + "/" + CITY.id + ".jpg?v=" + refreshVersion;
 
+  const imageMode = family.includes("medium") ? "fit" : "fill";
   $render(
     <zstack frame="max" alignment="center" background="#030817">
       <image
         url={imageURL}
         frame="max"
-        padding={String(-bleed)}
-        mode="fill"
+        mode={imageMode}
         clip="rect"
         accentedRenderingMode="fullColor"
       />
-      <vstack alignment="center" spacing="0" animation="clockHour">
-        <capsule frame={hourWidth + "," + hourLength} color="#f4e8c6" />
-        <capsule frame={hourWidth + "," + hourLength} color="clear" />
-      </vstack>
-      <vstack alignment="center" spacing="0" animation="clockMinute">
-        <capsule frame={minuteWidth + "," + minuteLength} color="#fff4dd" />
-        <capsule frame={minuteWidth + "," + minuteLength} color="clear" />
-      </vstack>
-      <vstack alignment="center" spacing="0" animation="clockSecond">
-        <capsule frame={secondWidth + "," + secondLength} color="#ff4b50" />
-        <capsule frame={secondWidth + "," + secondLength} color="clear" />
-      </vstack>
-      <circle frame={Math.max(3.5, dialSize * 0.018) + "," + Math.max(3.5, dialSize * 0.018)} color="#f5d68c" />
+      <zstack frame={dialSize + "," + dialSize} alignment="center">
+        <vstack animation="clockSecond">
+          <rect frame={secondWidth + "," + secondLength} color="#ff4b50" corner={secondWidth} />
+          <rect frame={secondWidth + "," + secondLength} color="clear" />
+        </vstack>
+        <vstack animation="clockMinute">
+          <rect frame={minuteWidth + "," + minuteLength} color="#fff4dd" corner={minuteWidth} />
+          <rect frame={minuteWidth + "," + minuteLength} color="clear" />
+        </vstack>
+        <vstack animation="clockHour">
+          <rect frame={hourWidth + "," + hourLength} color="#f4e8c6" corner={hourWidth} />
+          <rect frame={hourWidth + "," + hourLength} color="clear" />
+        </vstack>
+        <circle frame={Math.max(3.5, dialSize * 0.018) + "," + Math.max(3.5, dialSize * 0.018)} color="#f5d68c" />
+      </zstack>
     </zstack>
   );
 }
