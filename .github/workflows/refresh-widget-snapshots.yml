@@ -2,7 +2,8 @@ name: Refresh ScriptWidget chart snapshots
 
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    # 格式：分 时 日 月 星期 (UTC 时间)
+    - cron: '*/15 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
