@@ -74,17 +74,6 @@ if (!CITY) {
   const hourWidth = Math.max(0.8, dialSize * 0.0050).toFixed(2);
   const minuteWidth = Math.max(0.65, dialSize * 0.0037).toFixed(2);
   const secondWidth = Math.max(0.5, dialSize * 0.0024).toFixed(2);
-  const clockAnimation = (interval) => $animation({
-    type: "clock",
-    timezone: "current",
-    anchor: "center",
-    interval,
-  });
-  const handAnimation = {
-    second: clockAnimation(60),
-    minute: clockAnimation(60 * 60),
-    hour: clockAnimation(12 * 60 * 60),
-  };
   const imageKind = PACKAGE_KIND === "visible-sky" ? "visible-sky" : "active-planisphere";
   // Give the scheduled screenshot job a few minutes to publish before the URL cache key changes.
   const refreshVersion = Math.floor((Date.now() - 5 * 60 * 1000) / 900000);
@@ -102,15 +91,15 @@ if (!CITY) {
         accentedRenderingMode="fullColor"
       />
       <zstack frame={dialSize + "," + dialSize} alignment="center">
-        <vstack animation={handAnimation.second}>
+        <vstack animation="clockSecond">
           <rect frame={secondWidth + "," + secondLength} color="#ff4b50" corner={secondWidth} />
           <rect frame={secondWidth + "," + secondLength} color="clear" />
         </vstack>
-        <vstack animation={handAnimation.minute}>
+        <vstack animation="clockMinute">
           <rect frame={minuteWidth + "," + minuteLength} color="#fff4dd" corner={minuteWidth} />
           <rect frame={minuteWidth + "," + minuteLength} color="clear" />
         </vstack>
-        <vstack animation={handAnimation.hour}>
+        <vstack animation="clockHour">
           <rect frame={hourWidth + "," + hourLength} color="#f4e8c6" corner={hourWidth} />
           <rect frame={hourWidth + "," + hourLength} color="clear" />
         </vstack>
