@@ -41,7 +41,7 @@ const COLORS = {
   muted: "#9ba9bf",
   gold: "#dcb870",
   goldBright: "#f5d68c",
-  line: "rgba(122, 199, 214, .82)",
+  line: "rgba(122, 199, 214, .41)",
   boundary: "rgba(143, 168, 203, .4)",
 };
 
@@ -218,8 +218,8 @@ function drawConstellations() {
   ctx.save();
   for (const constellation of CONSTELLATIONS) {
     for (const boundary of constellation.boundaryParts) { ctx.setLineDash([]); ctx.beginPath(); drawPath(boundary, projectEquatorial); ctx.strokeStyle = COLORS.boundary; ctx.lineWidth = .4; ctx.stroke(); }
-    ctx.setLineDash([3, 5]);
-    for (const line of constellation.lines) { ctx.beginPath(); drawPath(line, projectEquatorial); ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1; ctx.stroke(); }
+    ctx.setLineDash([]);
+    for (const line of constellation.lines) { ctx.beginPath(); drawPath(line, projectEquatorial); ctx.strokeStyle = COLORS.line; ctx.lineWidth = .5; ctx.stroke(); }
   }
   ctx.restore();
 }
