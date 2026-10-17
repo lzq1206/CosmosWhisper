@@ -38,6 +38,14 @@ function declinationLimit() {
   return city.lat >= 0 ? Math.max(-90, city.lat - 90 - 20) : Math.min(90, city.lat + 90 + 20);
 }
 
+function projectHourAngle(hourAngle, normalized) {
+  const angle = WATCH_ROTATION - hourAngle;
+  return {
+    x: metrics.cx + Math.cos(angle) * metrics.radius * normalized,
+    y: metrics.cy + Math.sin(angle) * metrics.radius * normalized,
+  };
+}
+
 function projectEquatorial(ra, dec) {
   const horizontal = equatorialToHorizontal(ra, dec, state.date, city.lat, city.lon);
   const centerDec = state.latitudeSign * 90;
@@ -45,8 +53,8 @@ function projectEquatorial(ra, dec) {
   const limit = state.latitudeSign * declinationLimit();
   const normalized = Math.abs(centerDec - polarDec) / Math.abs(centerDec - limit);
   if (!Number.isFinite(normalized) || normalized > 1.04) return null;
-  const hourAngle = (localSiderealHours(state.date, city.lon) - horizontal.ra) * state.latitudeSign * 15 * DEG + WATCH_ROTATION;
-  return { x: metrics.cx + Math.cos(hourAngle) * metrics.radius * normalized, y: metrics.cy + Math.sin(hourAngle) * metrics.radius * normalized };
+  const hourAngle = (localSiderealHours(state.date, city.lon) - horizontal.ra) * state.latitudeSign * 15 * DEG;
+  return projectHourAngle(hourAngle, normalized);
 }
 
 function projectOfDate(ra, dec) {
@@ -57,7 +65,7 @@ function projectOfDate(ra, dec) {
   const normalized = Math.abs(centerDec - polarDec) / Math.abs(centerDec - limit);
   if (!Number.isFinite(normalized) || normalized > 1.04) return null;
   const hourAngle = (localSiderealHours(state.date, city.lon) - ra) * state.latitudeSign * 15 * DEG;
-  return { x: metrics.cx + Math.cos(hourAngle) * metrics.radius * normalized, y: metrics.cy + Math.sin(hourAngle) * metrics.radius * normalized, altitude: horizontal.altitude };
+  return { ...projectHourAngle(hourAngle, normalized), altitude: horizontal.altitude };
 }
 
 function drawPath(points, project, close = false) {
@@ -151,35 +159,51 @@ function drawBodies() {
   }
 }
 
+function horizonEquatorialAtAzimuth(azimuthDegrees, lst) {
+  const latitude = city.lat * DEG;
+  const azimuth = azimuthDegrees * DEG;
+  const sinDec = Math.cos(latitude) * Math.cos(azimuth);
+  const dec = Math.asin(clamp(sinDec, -1, 1)) / DEG;
+  const cosDec = Math.max(.000001, Math.cos(dec * DEG));
+  const sinHourAngle = -Math.sin(azimuth) / cosDec;
+  const cosHourAngle = -Math.sin(latitude) * Math.cos(azimuth) / cosDec;
+  const hourAngle = Math.atan2(sinHourAngle, cosHourAngle) / DEG / 15;
+  return [lst - hourAngle, dec];
+}
+
 function horizonEquatorialPath() {
   const points = [];
-  const latitude = city.lat * DEG;
   const lst = localSiderealHours(state.date, city.lon);
-  for (let index = 0; index <= 360; index += 1) {
-    const azimuth = index * DEG;
-    const sinDec = Math.cos(latitude) * Math.cos(azimuth);
-    const dec = Math.asin(clamp(sinDec, -1, 1)) / DEG;
-    const cosDec = Math.max(.000001, Math.cos(dec * DEG));
-    const sinHourAngle = -Math.sin(azimuth) / cosDec;
-    const cosHourAngle = -Math.sin(latitude) * Math.cos(azimuth) / cosDec;
-    const hourAngle = Math.atan2(sinHourAngle, cosHourAngle) / DEG / 15;
-    points.push([lst - hourAngle, dec]);
-  }
+  for (let index = 0; index <= 360; index += 1) points.push(horizonEquatorialAtAzimuth(index, lst));
   return points;
 }
 
-function drawHorizonCover() {
+function drawHorizonBoundary() {
   const horizon = horizonEquatorialPath();
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU);
-  ctx.moveTo(metrics.cx + metrics.radius, metrics.cy);
-  drawPath(horizon, projectOfDate, true);
-  ctx.fillStyle = "#07142e";
-  ctx.fill("evenodd");
   ctx.strokeStyle = "rgba(245,214,140,.7)";
   ctx.lineWidth = 1.5;
   ctx.beginPath(); drawPath(horizon, projectOfDate, true); ctx.stroke();
+  ctx.restore();
+}
+
+function drawCompassDirections() {
+  ctx.save();
+  ctx.font = "bold 12px Segoe UI,sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = "rgba(3,8,23,.96)";
+  ctx.fillStyle = COLORS.goldBright;
+  const lst = localSiderealHours(state.date, city.lon);
+  for (const [label, azimuth] of [["北", 0], ["东", 90], ["南", 180], ["西", 270]]) {
+    const [ra, dec] = horizonEquatorialAtAzimuth(azimuth, lst);
+    const point = projectOfDate(ra, dec);
+    if (!point) continue;
+    ctx.strokeText(label, point.x, point.y);
+    ctx.fillText(label, point.x, point.y);
+  }
   ctx.restore();
 }
 
@@ -211,7 +235,7 @@ function render() {
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
   drawGalaxy(); drawGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies();
   ctx.restore();
-  drawHorizonCover(); drawBezel(); drawPole();
+  drawHorizonBoundary(); drawCompassDirections(); drawBezel(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
 }
 
