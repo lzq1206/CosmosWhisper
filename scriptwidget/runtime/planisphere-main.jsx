@@ -65,26 +65,16 @@ if (!CITY) {
   const isLargeFamily = family.includes("large");
   const isSmallFamily = family.includes("small");
   const imageDirectory = isLargeFamily ? imageKind + "-large" : imageKind;
-  // Give the scheduled screenshot job a few minutes to publish before the URL cache key changes.
-  const refreshVersion = Math.floor((Date.now() - 5 * 60 * 1000) / 900000);
+  // Rotate the cache key five minutes after each scheduled snapshot run starts.
+  const refreshVersion = Math.floor((Date.now() - 12 * 60 * 1000) / 900000);
   const imageURL = "https://raw.githubusercontent.com/lzq1206/CosmosWhisper/widget-snapshots/"
     + imageDirectory + "/" + CITY.id + ".jpg?v=" + refreshVersion;
-  let imageSource = imageURL;
-  if (imageKind === "visible-sky" && isLargeFamily && typeof $fetch === "function") {
-    try {
-      const imageData = await $fetch(imageURL, { timeoutInterval: 10, responseType: "base64" });
-      if (typeof imageData === "string" && imageData.length > 0) {
-        imageSource = "data:image/jpeg;base64," + imageData;
-      }
-    } catch (error) {}
-  }
-
   // The tall large-family asset fills the widget while preserving the round dial.
   const imageMode = isSmallFamily || isLargeFamily ? "fill" : "fit";
   $render(
     <zstack frame="max" alignment="center" background="#030817">
       <image
-        url={imageSource}
+        url={imageURL}
         frame="max"
         mode={imageMode}
         clip="rect"
