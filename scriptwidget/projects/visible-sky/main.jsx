@@ -104,10 +104,6 @@ if (!CITY) {
           <rect frame={hourWidth + "," + hourLength} color="clear" />
         </vstack>
         <circle frame={Math.max(3.5, dialSize * 0.018) + "," + Math.max(3.5, dialSize * 0.018)} color="#f5d68c" />
-        <vstack frame="max" alignment="center" spacing="0">
-          <spacer />
-          <date date="now" style="time" font="caption2" color="#f5d68c" opacity="0.8" padding="0,0,12,0" />
-        </vstack>
       </zstack>
     </zstack>
   );
