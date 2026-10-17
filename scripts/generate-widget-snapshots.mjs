@@ -12,6 +12,14 @@ const CONCURRENCY = Math.max(1, Number(process.env.SNAPSHOT_CONCURRENCY || 8));
 const VIEWPORT_SIZE = 512;
 const DEVICE_SCALE_FACTOR = 2;
 const IMAGE_SIZE = VIEWPORT_SIZE * DEVICE_SCALE_FACTOR;
+// Large iPhone widgets are slightly taller than they are wide. Extend the
+// square chart with matching background so the widget can fill that ratio
+// without stretching or cropping the circular dial.
+const LARGE_WIDGET_ASPECT_RATIO = 0.94;
+const LARGE_IMAGE_HEIGHT = Math.ceil(IMAGE_SIZE / LARGE_WIDGET_ASPECT_RATIO);
+const LARGE_IMAGE_EXTRA_HEIGHT = LARGE_IMAGE_HEIGHT - IMAGE_SIZE;
+const LARGE_IMAGE_TOP_EXTENSION = Math.floor(LARGE_IMAGE_EXTRA_HEIGHT / 2);
+const LARGE_IMAGE_BOTTOM_EXTENSION = LARGE_IMAGE_EXTRA_HEIGHT - LARGE_IMAGE_TOP_EXTENSION;
 const DELAY_AFTER_RENDER_MS = 5000;
 const selectedCityIds = process.env.SNAPSHOT_CITY_IDS
   ? new Set(process.env.SNAPSHOT_CITY_IDS.split(",").map((id) => id.trim()).filter(Boolean))
@@ -62,12 +70,31 @@ async function captureJob(browser, job, index) {
 
     const canvas = page.locator(job.route.canvas);
     const png = await canvas.screenshot({ type: "png", scale: "device", timeout: 15000 });
-    const target = path.join(OUTPUT_DIR, job.route.kind, job.city.id + ".jpg");
-    await mkdir(path.dirname(target), { recursive: true });
-    await sharp(png)
+    const normalizedPng = await sharp(png)
       .resize(IMAGE_SIZE, IMAGE_SIZE, { fit: "fill" })
-      .jpeg({ quality: 88, mozjpeg: true })
-      .toFile(target);
+      .png()
+      .toBuffer();
+    const squareTarget = path.join(OUTPUT_DIR, job.route.kind, job.city.id + ".jpg");
+    const largeTarget = path.join(OUTPUT_DIR, job.route.kind + "-large", job.city.id + ".jpg");
+    await Promise.all([
+      mkdir(path.dirname(squareTarget), { recursive: true }),
+      mkdir(path.dirname(largeTarget), { recursive: true }),
+    ]);
+    await Promise.all([
+      sharp(normalizedPng)
+        .jpeg({ quality: 88, mozjpeg: true })
+        .toFile(squareTarget),
+      sharp(normalizedPng)
+        .extend({
+          top: LARGE_IMAGE_TOP_EXTENSION,
+          bottom: LARGE_IMAGE_BOTTOM_EXTENSION,
+          left: 0,
+          right: 0,
+          background: "#030817",
+        })
+        .jpeg({ quality: 88, mozjpeg: true })
+        .toFile(largeTarget),
+    ]);
 
     if (index % 10 === 0 || index === jobs.length) {
       process.stdout.write("Captured " + index + " of " + jobs.length + " city chart images\n");

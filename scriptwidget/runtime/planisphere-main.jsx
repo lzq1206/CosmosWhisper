@@ -62,13 +62,16 @@ if (!CITY) {
     ? String($getenv("widget-size") || "systemLarge").toLowerCase()
     : "systemLarge";
   const imageKind = PACKAGE_KIND === "visible-sky" ? "visible-sky" : "active-planisphere";
+  const isLargeFamily = family.includes("large");
+  const isSmallFamily = family.includes("small");
+  const imageDirectory = isLargeFamily ? imageKind + "-large" : imageKind;
   // Give the scheduled screenshot job a few minutes to publish before the URL cache key changes.
   const refreshVersion = Math.floor((Date.now() - 5 * 60 * 1000) / 900000);
   const imageURL = "https://raw.githubusercontent.com/lzq1206/CosmosWhisper/widget-snapshots/"
-    + imageKind + "/" + CITY.id + ".jpg?v=" + refreshVersion;
+    + imageDirectory + "/" + CITY.id + ".jpg?v=" + refreshVersion;
 
-  // Keep the full round chart visible in rectangular widget families.
-  const imageMode = family.includes("small") ? "fill" : "fit";
+  // The tall large-family asset fills the widget while preserving the round dial.
+  const imageMode = isSmallFamily || isLargeFamily ? "fill" : "fit";
   $render(
     <zstack frame="max" alignment="center" background="#030817">
       <image
