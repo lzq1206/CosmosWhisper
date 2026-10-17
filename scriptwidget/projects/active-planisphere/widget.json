@@ -2,7 +2,7 @@
   "formatVersion": 2,
   "id": "com.lzq1206.cosmoswhisper.active-planisphere",
   "name": "CosmosWhisper · 活动星盘",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
   "supportedFamilies": [

@@ -9,7 +9,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASE_URL = (process.env.SNAPSHOT_BASE_URL || "https://lzq1206.github.io/CosmosWhisper").replace(/\/+$/, "");
 const OUTPUT_DIR = process.env.WIDGET_SNAPSHOT_OUTPUT || path.join(ROOT, "scriptwidget", "snapshot-stage");
 const CONCURRENCY = Math.max(1, Number(process.env.SNAPSHOT_CONCURRENCY || 8));
-const IMAGE_SIZE = 512;
+const VIEWPORT_SIZE = 512;
+const DEVICE_SCALE_FACTOR = 2;
+const IMAGE_SIZE = VIEWPORT_SIZE * DEVICE_SCALE_FACTOR;
 const DELAY_AFTER_RENDER_MS = 5000;
 const selectedCityIds = process.env.SNAPSHOT_CITY_IDS
   ? new Set(process.env.SNAPSHOT_CITY_IDS.split(",").map((id) => id.trim()).filter(Boolean))
@@ -39,8 +41,8 @@ async function waitForServer() {
 
 async function captureJob(browser, job, index) {
   const context = await browser.newContext({
-    viewport: { width: IMAGE_SIZE, height: IMAGE_SIZE },
-    deviceScaleFactor: 2,
+    viewport: { width: VIEWPORT_SIZE, height: VIEWPORT_SIZE },
+    deviceScaleFactor: DEVICE_SCALE_FACTOR,
     colorScheme: "dark",
     locale: "zh-CN",
     timezoneId: "Asia/Shanghai",
@@ -59,12 +61,12 @@ async function captureJob(browser, job, index) {
     if (pageErrors.length) throw new Error(pageErrors.join("; "));
 
     const canvas = page.locator(job.route.canvas);
-    const png = await canvas.screenshot({ type: "png", timeout: 15000 });
+    const png = await canvas.screenshot({ type: "png", scale: "device", timeout: 15000 });
     const target = path.join(OUTPUT_DIR, job.route.kind, job.city.id + ".jpg");
     await mkdir(path.dirname(target), { recursive: true });
     await sharp(png)
       .resize(IMAGE_SIZE, IMAGE_SIZE, { fit: "fill" })
-      .jpeg({ quality: 84, mozjpeg: true })
+      .jpeg({ quality: 88, mozjpeg: true })
       .toFile(target);
 
     if (index % 10 === 0 || index === jobs.length) {

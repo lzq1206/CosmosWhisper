@@ -67,7 +67,8 @@ if (!CITY) {
   const imageURL = "https://raw.githubusercontent.com/lzq1206/CosmosWhisper/widget-snapshots/"
     + imageKind + "/" + CITY.id + ".jpg?v=" + refreshVersion;
 
-  const imageMode = family.includes("medium") ? "fit" : "fill";
+  // Keep the full round chart visible in rectangular widget families.
+  const imageMode = family.includes("small") ? "fill" : "fit";
   $render(
     <zstack frame="max" alignment="center" background="#030817">
       <image
