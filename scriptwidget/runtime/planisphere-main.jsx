@@ -1,7 +1,7 @@
 /**
  * CosmosWhisper ScriptWidget packages.
  * The dial image is captured from the matching city page every 15 minutes.
- * Native WidgetKit clock-hand effects rotate three centered, full-dial layers.
+ * Full-bleed city screenshot with native WidgetKit rotation on centered hands.
  */
 const PACKAGE_KIND = "__PACKAGE_KIND__";
 const CITY_CATALOG = __CITY_CATALOG__;
@@ -46,26 +46,6 @@ function nearestCity(latitude, longitude) {
   return selected;
 }
 
-function buildClockHand(dialSize, lengthRatio, widthRatio, color, animation) {
-  const handLength = Math.round(dialSize * lengthRatio);
-  const topGap = Math.round(dialSize / 2 - handLength);
-  const bottomGap = dialSize - topGap - handLength;
-  const width = Math.max(0.7, dialSize * widthRatio).toFixed(2);
-
-  return (
-    <vstack
-      frame={dialSize + "," + dialSize}
-      alignment="center"
-      spacing="0"
-      animation={animation}
-    >
-      <capsule frame={width + "," + topGap} color="clear" />
-      <capsule frame={width + "," + handLength} color={color} />
-      <capsule frame={width + "," + bottomGap} color="clear" />
-    </vstack>
-  );
-}
-
 const location = await getCurrentLocation();
 const CITY = location ? nearestCity(location.latitude, location.longitude) : null;
 
@@ -81,7 +61,15 @@ if (!CITY) {
   const family = typeof $getenv === "function"
     ? String($getenv("widget-size") || "systemLarge").toLowerCase()
     : "systemLarge";
-  const dialSize = family.includes("small") ? 148 : family.includes("medium") ? 142 : 332;
+  const bleed = 16;
+  const baseDialSize = family.includes("small") ? 148 : 332;
+  const dialSize = baseDialSize + bleed * 2;
+  const hourLength = Math.round(dialSize * 0.14);
+  const minuteLength = Math.round(dialSize * 0.22);
+  const secondLength = Math.round(dialSize * 0.30);
+  const hourWidth = Math.max(0.7, dialSize * 0.0042).toFixed(2);
+  const minuteWidth = Math.max(0.7, dialSize * 0.0030).toFixed(2);
+  const secondWidth = Math.max(0.7, dialSize * 0.0019).toFixed(2);
   const imageKind = PACKAGE_KIND === "visible-sky" ? "visible-sky" : "active-planisphere";
   // Give the scheduled screenshot job a few minutes to publish before the URL cache key changes.
   const refreshVersion = Math.floor((Date.now() - 5 * 60 * 1000) / 900000);
@@ -92,13 +80,24 @@ if (!CITY) {
     <zstack frame="max" alignment="center" background="#030817">
       <image
         url={imageURL}
-        frame={dialSize + "," + dialSize}
-        mode="fit"
+        frame="max"
+        padding={String(-bleed)}
+        mode="fill"
+        clip="rect"
         accentedRenderingMode="fullColor"
       />
-      {buildClockHand(dialSize, 0.14, 0.0042, "#f4e8c6", "clockHour")}
-      {buildClockHand(dialSize, 0.22, 0.0030, "#fff4dd", "clockMinute")}
-      {buildClockHand(dialSize, 0.30, 0.0019, "#ff4b50", "clockSecond")}
+      <vstack alignment="center" spacing="0" animation="clockHour">
+        <capsule frame={hourWidth + "," + hourLength} color="#f4e8c6" />
+        <capsule frame={hourWidth + "," + hourLength} color="clear" />
+      </vstack>
+      <vstack alignment="center" spacing="0" animation="clockMinute">
+        <capsule frame={minuteWidth + "," + minuteLength} color="#fff4dd" />
+        <capsule frame={minuteWidth + "," + minuteLength} color="clear" />
+      </vstack>
+      <vstack alignment="center" spacing="0" animation="clockSecond">
+        <capsule frame={secondWidth + "," + secondLength} color="#ff4b50" />
+        <capsule frame={secondWidth + "," + secondLength} color="clear" />
+      </vstack>
       <circle frame={Math.max(3.5, dialSize * 0.018) + "," + Math.max(3.5, dialSize * 0.018)} color="#f5d68c" />
     </zstack>
   );
