@@ -418,10 +418,10 @@ function placeAt(D, dx, dy, boxW, boxH, child) {
   const left = clamp(Math.round(cx + dx - w / 2), 0, Math.max(0, D - w));
   const top = clamp(Math.round(cy + dy - h / 2), 0, Math.max(0, D - h));
   return (
-    <vstack frame={`${D},${D}`} alignment="topLeading" spacing="0">
-      <spacer frame={`1,${top}`} />
-      <hstack frame={`${D},${h}`} alignment="center" spacing="0">
-        <spacer frame={`${left},1`} />
+    <vstack frame={`${D},${D},topLeading`} alignment="leading" spacing="0">
+      <rect frame={`1,${top}`} color="clear" />
+      <hstack frame={`${D},${h},leading`} alignment="center" spacing="0">
+        <rect frame={`${left},1`} color="clear" />
         {child}
       </hstack>
     </vstack>
@@ -479,7 +479,7 @@ function polarPoint(angle, radius) {
 
 function placeText(D, x, y, width, height, text, fontSize, color, opacity = 1, rotation = 0, weight = "regular") {
   return placeAt(D, x, y, width, height,
-    <text frame={`${width},${height}`} font={`system,${fontSize}`} fontWeight={weight} color={color} opacity={opacity} rotation={rotation}>{text}</text>);
+    <text frame={`${width},${height}`} font={`${fontSize},${weight},default`} fontWeight={weight} color={color} opacity={opacity} rotation={rotation}>{text}</text>);
 }
 
 function moonCoordinates(date) {
@@ -578,14 +578,14 @@ function buildTimeRing(D, radius, scale, timeRing, date) {
     const pointA = polarPoint(angle, trackOuter - length);
     const pointB = polarPoint(angle, trackOuter);
     addLine(nodes, D, pointA.x, pointA.y, pointB.x, pointB.y,
-      Math.max(0.45, (major ? 1 : 0.7) * scale), major ? "#f0eee5" : "#8993ab", major ? 0.78 : 0.58);
+      Math.max(0.25, (major ? 1 : 0.7) * scale), major ? "#f0eee5" : "#8993ab", major ? 0.78 : 0.58);
   }
 
   for (const transition of timeRing.transitions) {
     const angle = -Math.PI / 2 + transition.fraction * TAU;
     const point = polarPoint(angle, trackOuter + 3 * scale);
-    nodes.push(placeText(D, point.x, point.y, 18 * scale + 3, 8 * scale + 2, transition.label,
-      Math.max(4.3, 7 * scale), "#f5f0df", 0.9, 0, "semibold"));
+    nodes.push(placeText(D, point.x, point.y, 22 * scale, 11 * scale, transition.label,
+      Math.max(2.2, 8 * scale), "#f5f0df", 0.9, 0, "semibold"));
   }
 
   const markerAngle = -Math.PI / 2 + timeRing.localFraction * TAU;
@@ -646,8 +646,8 @@ function buildSolarTermRing(D, radius, scale, date, bodies) {
     let textRotation = middleAngle + Math.PI / 2;
     if (Math.sin(middleAngle) > 0) textRotation += Math.PI;
     const labelPoint = polarPoint(middleAngle, bandMid);
-    const fontSize = Math.max(4.6, 11 * scale);
-    nodes.push(placeText(D, labelPoint.x, labelPoint.y, 17 * scale + 3, 9 * scale + 2,
+    const fontSize = Math.max(2.2, 11 * scale);
+    nodes.push(placeText(D, labelPoint.x, labelPoint.y, 22 * scale, 13 * scale,
       term.name, fontSize, index === currentIndex ? "#f5d68c" : "#d2dceb",
       index === currentIndex ? 1 : 0.86, textRotation * RAD, index === currentIndex ? "bold" : "regular"));
   }
@@ -678,7 +678,7 @@ function buildSolarTermRing(D, radius, scale, date, bodies) {
 function buildPlanisphereDial(D, date, bodies, mode) {
   const scale = D / 512;
   const radius = Math.max(1, D / 2 - 35 * scale - 1);
-  const borderWidth = Math.max(0.55, 1.35 * scale);
+  const borderWidth = Math.max(0.35, 1.35 * scale);
   const innerRadius = radius - borderWidth / 2;
   const timeRing = localTimeRing(date);
   const skyNodes = [];
@@ -749,13 +749,13 @@ function buildPlanisphereDial(D, date, bodies, mode) {
         const first = polarPoint((index / steps) * TAU, circleRadius);
         const second = polarPoint(((index + 1) / steps) * TAU, circleRadius);
         addLine(gridNodes, D, first.x, first.y, second.x, second.y,
-          Math.max(0.34, 0.62 * scale), "#6a84ac", 0.30);
+          Math.max(0.25, 0.62 * scale), "#6a84ac", 0.30);
       }
     }
     for (let azimuth = 0; azimuth < 360; azimuth += 90) {
       const angle = (-azimuth - 90) * DEG;
       const end = polarPoint(angle, innerRadius);
-      addLine(gridNodes, D, 0, 0, end.x, end.y, Math.max(0.34, 0.58 * scale), "#6a84ac", 0.27);
+      addLine(gridNodes, D, 0, 0, end.x, end.y, Math.max(0.25, 0.58 * scale), "#6a84ac", 0.27);
     }
   }
 
@@ -772,7 +772,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     const equator = [];
     for (let ra = 0; ra <= 24; ra += 2) equator.push([ra % 24, 0]);
     addPolyline(skyNodes, D, equator, projectSkyBase,
-      Math.max(0.48, 0.7 * scale), "#ef6868", 0.86, 1, true);
+      Math.max(0.25, 0.7 * scale), "#ef6868", 0.86, 1, true);
 
     const ecliptic = [];
     for (let longitude = 0; longitude <= 360; longitude += 30) {
@@ -780,7 +780,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
       ecliptic.push([coordinates.ra, coordinates.dec]);
     }
     addPolyline(skyNodes, D, ecliptic, projectDateBase,
-      Math.max(0.72, 1.4 * scale), "#f2c36c", 0.86, 1, true);
+      Math.max(0.35, 1.4 * scale), "#f2c36c", 0.86, 1, true);
   }
 
   // The circular chart rim already marks the horizon edge; its light border
@@ -793,7 +793,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     const line = constellation.lines[0];
     if (line) {
       addPolyline(constellationNodes, D, line, projectSkyBase,
-        Math.max(0.36, 0.52 * scale), "#7ac7d6", 0.43, D < 190 ? 4 : 2);
+        Math.max(0.25, 0.52 * scale), "#7ac7d6", 0.43, D < 190 ? 4 : 2);
     }
   }
 
@@ -813,8 +813,8 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     if (star.magnitude <= 1.4) addDot(starNodes, D, point.x, point.y, diameter * 3.2, color, 0.10);
     addDot(starNodes, D, point.x, point.y, diameter, color, alpha);
     if (star.magnitude <= 0.8 && star.name && labelPoint) {
-      labelNodes.push(placeText(D, labelPoint.x + 6 * scale, labelPoint.y - 3 * scale, 24 * scale + 3, 8 * scale + 2,
-        star.name, Math.max(4.5, 8 * scale), "#f0eee5", 0.74, 0, "regular"));
+      labelNodes.push(placeText(D, labelPoint.x + 6 * scale, labelPoint.y - 3 * scale, 32 * scale, 12 * scale,
+        star.name, Math.max(2.2, 10 * scale), "#f0eee5", 0.74, 0, "regular"));
     }
   }
 
@@ -841,8 +841,8 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     bodyNodes.push(placeAt(D, point.x, point.y, box, box, node));
     if (body.key !== "sun" || mode === "large") {
       const labelDx = point.x < 0 ? -8 * scale : 8 * scale;
-      bodyNodes.push(placeText(D, point.x + labelDx, point.y - 5 * scale, 24 * scale + 3, 8 * scale + 2,
-        body.name, Math.max(4.4, 7.5 * scale), body.color, 0.90, 0, "medium"));
+      bodyNodes.push(placeText(D, point.x + labelDx, point.y - 5 * scale, 28 * scale, 12 * scale,
+        body.name, Math.max(2.2, 9 * scale), body.color, 0.90, 0, "medium"));
     }
   }
 
@@ -853,8 +853,8 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     for (const [ra, dec] of constellation.labels) {
       const point = projectStar(ra, dec);
       if (!point) continue;
-      labelNodes.push(placeText(D, point.x, point.y, 26 * scale + 4, 8 * scale + 2,
-        constellation.name, Math.max(4.3, 7 * scale), "#7ac7d6", 0.40, 0, "regular"));
+      labelNodes.push(placeText(D, point.x, point.y, 32 * scale, 12 * scale,
+        constellation.name, Math.max(2.2, 10 * scale), "#7ac7d6", 0.40, 0, "regular"));
     }
   }
 
@@ -873,13 +873,13 @@ function buildPlanisphereDial(D, date, bodies, mode) {
     if (!a || !p || !b) continue;
     let rotation = Math.atan2(b.y - a.y, b.x - a.x);
     if (Math.cos(rotation) < 0) rotation += Math.PI;
-    labelNodes.push(placeText(D, p.x, p.y, 9 * scale + 3, 9 * scale + 2, String(month + 1),
-      Math.max(4.4, 8.5 * scale), "#f5d68c", 0.98, rotation * RAD, "bold"));
+    labelNodes.push(placeText(D, p.x, p.y, 13 * scale, 12 * scale, String(month + 1),
+      Math.max(2.2, 9 * scale), "#f5d68c", 0.98, rotation * RAD, "bold"));
   }
 
   // Eight horizon bearings use azimuth itself: east (90°) is on the left.
   const directionRadius = Math.max(4, innerRadius - 20 * scale);
-  const directionFont = Math.max(4.8, 8 * scale);
+  const directionFont = Math.max(2.2, 11 * scale);
   const directions = [["北", 0], ["东北", 45], ["东", 90], ["东南", 135], ["南", 180], ["西南", 225], ["西", 270], ["西北", 315]];
   const directionNodes = [];
   for (const [label, azimuth] of directions) {
@@ -896,7 +896,7 @@ function buildPlanisphereDial(D, date, bodies, mode) {
       x = -directionRadius * Math.sin(angle);
       y = -directionRadius * Math.cos(angle);
     }
-    directionNodes.push(placeText(D, x, y, 18 * scale + 5, 9 * scale + 3, label,
+    directionNodes.push(placeText(D, x, y, 23 * scale, 13 * scale, label,
       directionFont, "#ffffff", 0.96, 0, "bold"));
   }
 
@@ -986,9 +986,9 @@ if (rawFamily.includes("inline")) {
     <zstack frame="max" alignment="center" background="#030817">
       <circle frame="56,56" color="#0b2244" />
       <vstack alignment="center" spacing="1">
-        <text font="system,8" fontWeight="bold" color="#f5d68c">{solarTerm.name}</text>
-        <text font="system,11" fontWeight="bold" color="#f5f0df">{pad2(lstH)}:{pad2(lstM)}</text>
-        <text font="system,7" color="#79c8d2">{moon.phaseName}</text>
+        <text font="8,bold,default" color="#f5d68c">{solarTerm.name}</text>
+        <text font="11,bold,default" color="#f5f0df">{pad2(lstH)}:{pad2(lstM)}</text>
+        <text font="7,regular,default" color="#79c8d2">{moon.phaseName}</text>
       </vstack>
     </zstack>
   );
@@ -996,9 +996,9 @@ if (rawFamily.includes("inline")) {
   const visibleNames = visibleBodies.map((body) => body.name).join(" ") || "暂无可见行星";
   $render(
     <vstack frame="max" alignment="leading" spacing="2" padding="8" background="#030817">
-      <hstack spacing="4"><text font="system,10" fontWeight="bold" color="#f5d68c">{CITY.name} · {solarTerm.name}</text><spacer /><text font="system,9" color="#79c8d2">LST {lstStr}</text></hstack>
-      <text font="system,9" color="#f5f0df">月相：{moon.phaseName} · {Math.round(moon.phaseFraction * 100)}% · {dateStr} {timeStr}</text>
-      <text font="system,8" color="#9ba9bf">地平以上：{visibleNames}</text>
+      <hstack spacing="4"><text font="10,bold,default" color="#f5d68c">{CITY.name} · {solarTerm.name}</text><spacer /><text font="9,regular,default" color="#79c8d2">LST {lstStr}</text></hstack>
+      <text font="9,regular,default" color="#f5f0df">月相：{moon.phaseName} · {Math.round(moon.phaseFraction * 100)}% · {dateStr} {timeStr}</text>
+      <text font="8,regular,default" color="#9ba9bf">地平以上：{visibleNames}</text>
     </vstack>
   );
 } else if (rawFamily.includes("small")) {
@@ -1008,10 +1008,10 @@ if (rawFamily.includes("inline")) {
     <hstack frame="max" padding="4,6,4,6" background="#030817" spacing="5" alignment="center">
       {buildPlanisphereDial(142, now, bodies, "medium")}
       <vstack frame="max" alignment="leading" spacing="3">
-        <text font="system,10" fontWeight="bold" color="#f5d68c">{CITY.name}</text>
-        <text font="system,8" color="#79c8d2">恒星时 {lstStr}</text>
-        <text font="system,8" color="#f5f0df">{solarTerm.name} · {moon.phaseName}</text>
-        <text font="system,7" color="#9ba9bf">{locationText}</text>
+        <text font="10,bold,default" color="#f5d68c">{CITY.name}</text>
+        <text font="8,regular,default" color="#79c8d2">恒星时 {lstStr}</text>
+        <text font="8,regular,default" color="#f5f0df">{solarTerm.name} · {moon.phaseName}</text>
+        <text font="7,regular,default" color="#9ba9bf">{locationText}</text>
       </vstack>
     </hstack>
   );
