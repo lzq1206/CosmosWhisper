@@ -2,7 +2,7 @@
   "formatVersion": 2,
   "id": "com.lzq1206.cosmoswhisper.active-planisphere",
   "name": "CosmosWhisper · 活动星盘",
-  "version": "1.10.2",
+  "version": "1.10.3",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
   "supportedFamilies": [
@@ -15,7 +15,8 @@
     "network"
   ],
   "networkDomains": [
-    "raw.githubusercontent.com"
+    "lzq1206.github.io",
+    "cosmos.rainywhisper.com"
   ],
   "plugins": [],
   "description": "网页 Watch 风格的城市活动星盘底图。",

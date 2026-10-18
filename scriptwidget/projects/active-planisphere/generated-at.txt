@@ -1,2 +1,2 @@
-2026-10-18T03:48:01.558Z
+2026-10-18T10:15:45.483Z
 城市页面截图由 GitHub Actions 每 3 小时检查并补齐未来 12 小时的 15 分钟时刻；ScriptWidget 选择最近时刻的底图。WidgetKit 的实际刷新时间由 ScriptWidget 和系统调度。

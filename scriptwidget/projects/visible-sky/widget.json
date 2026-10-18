@@ -2,7 +2,7 @@
   "formatVersion": 2,
   "id": "com.lzq1206.cosmoswhisper.visible-sky",
   "name": "CosmosWhisper · 可见天区",
-  "version": "1.10.2",
+  "version": "1.10.3",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
   "supportedFamilies": [
@@ -15,7 +15,8 @@
     "network"
   ],
   "networkDomains": [
-    "raw.githubusercontent.com"
+    "lzq1206.github.io",
+    "cosmos.rainywhisper.com"
   ],
   "plugins": [],
   "description": "网页首页风格的城市可见天区星图底图。",

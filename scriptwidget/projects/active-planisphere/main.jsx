@@ -8,6 +8,17 @@ const CITY_CATALOG = [{"id":"beijing","name":"北京","lat":39.9042,"lon":116.40
 
 const DEG = Math.PI / 180;
 
+async function fetchSnapshotBase64(url) {
+  try {
+    const image = await fetch(url, { responseType: "base64", timeoutInterval: 3 });
+    // The JPEG signature prevents an HTTP error page from being mistaken for
+    // a successful image response by ScriptWidget's text-based fetch API.
+    return typeof image === "string" && image.startsWith("/9j/") ? image : null;
+  } catch (error) {
+    return null;
+  }
+}
+
 async function getCurrentLocation() {
   try {
     if (typeof $location === "undefined" || !$location.isAvailable()) return null;
@@ -67,20 +78,32 @@ if (!CITY) {
   const slotMilliseconds = 15 * 60 * 1000;
   const nearestSnapshot = Math.round(Date.now() / slotMilliseconds) * slotMilliseconds;
   const snapshotKey = new Date(nearestSnapshot).toISOString().slice(0, 16).replace(/[-:]/g, "") + "Z";
-  const imageURL = "https://raw.githubusercontent.com/lzq1206/CosmosWhisper/widget-snapshots/"
-    + imageKind + "/" + CITY.id + "/" + snapshotKey + ".jpg?v=" + snapshotKey;
+  const snapshotPath = imageKind + "/" + CITY.id + "/" + snapshotKey + ".jpg?v=" + snapshotKey;
+  const pagesURL = "https://lzq1206.github.io/CosmosWhisper/widget-snapshots/" + snapshotPath;
+  const customDomainURL = "https://cosmos.rainywhisper.com/widget-snapshots/" + snapshotPath;
+  const imageBase64 = (await fetchSnapshotBase64(pagesURL))
+    || (await fetchSnapshotBase64(customDomainURL));
   // Every image includes the large-family background extension. Square widgets
   // crop only that extra background; large widgets show the complete dial.
   const imageMode = isSmallFamily || isLargeFamily ? "fill" : "fit";
-  $render(
-    <zstack frame="max" alignment="center" background="#030817">
-      <image
-        url={imageURL}
-        frame="max"
-        mode={imageMode}
-        clip="rect"
-        accentedRenderingMode="fullColor"
-      />
-    </zstack>
-  );
+  if (imageBase64) {
+    $render(
+      <zstack frame="max" alignment="center" background="#030817">
+        <image
+          url={"data:image/jpeg;base64," + imageBase64}
+          frame="max"
+          mode={imageMode}
+          clip="rect"
+          accentedRenderingMode="fullColor"
+        />
+      </zstack>
+    );
+  } else {
+    $render(
+      <vstack frame="max" background="#030817" alignment="center" spacing="6" padding="16">
+        <icon systemName="wifi.slash" size="24" color="#f5d68c" />
+        <text font="caption" color="#9ba9bf">星图暂不可用，请稍后刷新</text>
+      </vstack>
+    );
+  }
 }

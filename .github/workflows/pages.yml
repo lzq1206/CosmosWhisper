@@ -4,10 +4,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Refresh ScriptWidget chart snapshots"]
+    types: [completed]
   schedule:
     - cron: "7,37 * * * *"
 
 permissions:
+  actions: write
   contents: read
   pages: write
   id-token: write
@@ -18,6 +22,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -25,6 +30,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Checkout rolling ScriptWidget snapshots
+        uses: actions/checkout@v4
+        with:
+          ref: widget-snapshots
+          path: .widget-snapshots
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -38,6 +49,11 @@ jobs:
         run: npm ci
       - name: Generate Beijing RSS image
         run: npm run generate:beijing-widgy
+      - name: Add rolling ScriptWidget images to Pages
+        run: |
+          mkdir -p widget-snapshots
+          cp .widget-snapshots/manifest.json widget-snapshots/manifest.json
+          cp -a .widget-snapshots/visible-sky .widget-snapshots/active-planisphere widget-snapshots/
       - name: Remove build dependencies
         run: rm -rf node_modules
       - name: Configure Pages
@@ -45,9 +61,17 @@ jobs:
         with:
           enablement: true
       - name: Upload static site
+        id: upload-site
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
+          retention-days: 1
       - name: Deploy to Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Remove deployed Pages artifact
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.upload-site.outputs.artifact_id }}
+        run: gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}"
