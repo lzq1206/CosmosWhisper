@@ -205,7 +205,7 @@ function drawAuxiliaryPlanes() {
   ctx.beginPath(); drawPath(ecliptic, projectOfDate); ctx.stroke();
 
   ctx.font = "10px Segoe UI,sans-serif";
-  ctx.fillStyle = "rgba(244,238,209,.85)";
+  ctx.fillStyle = "rgba(239, 104, 104, .9)";
   const equatorLabel = projectEquatorial(6, 0);
   if (equatorLabel) ctx.fillText("天赤道", equatorLabel.x + 5, equatorLabel.y - 5);
   ctx.fillStyle = "rgba(242,195,108,.9)";
