@@ -49,7 +49,7 @@ async function writeProjectFiles(definition, runtimeTemplate, generatedAt) {
     formatVersion: 2,
     id: definition.id,
     name: definition.name,
-    version: "1.10.1",
+    version: "1.10.2",
     runtimeVersion: "1.0",
     entry: "main.jsx",
     supportedFamilies: ["systemSmall", "systemMedium", "systemLarge"],
@@ -87,8 +87,9 @@ async function createSwtArchive(definition) {
     "$source = [System.IO.Path]::GetFullPath(" + psQuote(project) + ")",
     "$target = [System.IO.Path]::GetFullPath(" + psQuote(tempZip) + ")",
     "$final = [System.IO.Path]::GetFullPath(" + psQuote(exportPath) + ")",
+    "$rootName = " + psQuote(definition.folder),
     "$archive = [System.IO.Compression.ZipFile]::Open($target, [System.IO.Compression.ZipArchiveMode]::Create)",
-    "try { Get-ChildItem -LiteralPath $source -File -Recurse | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($source.Length).TrimStart([char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)).Replace('\\', '/'); $entry = $archive.CreateEntry($relative, [System.IO.Compression.CompressionLevel]::Optimal); $inputStream = [System.IO.File]::OpenRead($_.FullName); $outputStream = $entry.Open(); try { $inputStream.CopyTo($outputStream) } finally { $outputStream.Dispose(); $inputStream.Dispose() } } } finally { $archive.Dispose() }",
+    "try { Get-ChildItem -LiteralPath $source -File -Recurse | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($source.Length).TrimStart([char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)).Replace('\\', '/'); $entry = $archive.CreateEntry(($rootName + '/' + $relative), [System.IO.Compression.CompressionLevel]::Optimal); $inputStream = [System.IO.File]::OpenRead($_.FullName); $outputStream = $entry.Open(); try { $inputStream.CopyTo($outputStream) } finally { $outputStream.Dispose(); $inputStream.Dispose() } } } finally { $archive.Dispose() }",
     "Move-Item -LiteralPath $target -Destination $final -Force",
   ].join("; ");
 
