@@ -49,7 +49,7 @@ async function writeProjectFiles(definition, runtimeTemplate, generatedAt) {
     formatVersion: 2,
     id: definition.id,
     name: definition.name,
-    version: "1.10.0",
+    version: "1.10.1",
     runtimeVersion: "1.0",
     entry: "main.jsx",
     supportedFamilies: ["systemSmall", "systemMedium", "systemLarge"],
@@ -67,7 +67,7 @@ async function writeProjectFiles(definition, runtimeTemplate, generatedAt) {
   await writeFile(
     path.join(project, "README.md"),
     "# " + definition.name + "\n\n" + definition.readme
-      + "\n\n网页画布加载后等待 5 秒再截图，生成适配大尺寸小组件比例的 1024×1090 高分辨率底图。GitHub Actions 每 3 小时检查未来 12 小时的 15 分钟时刻，只生成缺少的图片；小组件按当前时间选取最近时刻的快照。城市匹配范围为省会、自治区首府、直辖市和台北。小尺寸方形组件填满显示；中尺寸等比适配且保留完整星盘。小组件只显示星盘底图，不叠加指针或数字时间。"
+      + "\n\n网页画布加载后等待 5 秒再截图，生成适配大尺寸小组件比例的 1024×1090 高分辨率底图。GitHub Actions 每 3 小时检查未来 12 小时的 15 分钟时刻，只生成缺少的图片；小组件按当前时间选取最近时刻的快照。邻近省会共用 12 个区域代表城市的星图底图，并按设备位置选择最近的一座。小尺寸方形组件填满显示；中尺寸等比适配且保留完整星盘。小组件只显示星盘底图，不叠加指针或数字时间。"
       + "\n\n小组件需要定位和网络权限。定位结果会匹配仓库内最近的城市页面；网络权限用于读取该城市的截图。系统实际刷新小组件的时间由 ScriptWidget 和 WidgetKit 管理。"
       + "\n\n导入文件：scriptwidget/exports/" + definition.folder + ".swt\n"
   );
@@ -115,7 +115,7 @@ for (const definition of packageDefinitions) {
 const readme = "# ScriptWidget packages\n\n"
   + "- exports/visible-sky.swt — 可见天区版\n"
   + "- exports/active-planisphere.swt — 活动星盘版\n\n"
-  + "星盘底图来自对应网页城市页面的截图；网页画布加载后等待 5 秒，按设备像素导出适配大尺寸小组件的 1024×1090 高分辨率图片。GitHub Actions 每 3 小时检查未来 12 小时的 15 分钟时刻，只生成缺少的图片，并清理已过期图片。ScriptWidget 根据设备定位，在省会、自治区首府、直辖市和台北中选择最近城市；按当前时间使用最近时刻的快照。小组件只显示星盘底图，不叠加指针或数字时间。小尺寸方形组件填满显示；中尺寸等比适配完整星盘。\n\n"
+  + "星盘底图来自对应网页城市页面的截图；网页画布加载后等待 5 秒，按设备像素导出适配大尺寸小组件的 1024×1090 高分辨率图片。GitHub Actions 每 3 小时检查未来 12 小时的 15 分钟时刻，只生成缺少的图片，并清理已过期图片。ScriptWidget 根据设备定位，在 12 个区域代表城市中选择最近城市；邻近省会共用该城市的截图，并按当前时间使用最近时刻的快照。小组件只显示星盘底图，不叠加指针或数字时间。小尺寸方形组件填满显示；中尺寸等比适配完整星盘。\n\n"
   + "导入时需要允许 ScriptWidget 访问定位和 raw.githubusercontent.com 网络图片。图片计划每 3 小时补齐未来 12 小时；WidgetKit 对小组件本身的刷新由 ScriptWidget 和系统调度。\n\n"
   + "用 npm run generate:scriptwidget 重新生成两个项目目录和 SWT 文件。也可以把 projects/visible-sky 或 projects/active-planisphere 作为文件夹放进 ScriptWidget Scripts 目录。\n";
 await writeFile(path.join(ROOT, "scriptwidget", "README.md"), readme);
