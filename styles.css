@@ -300,6 +300,22 @@ body {
   font-weight: 600;
 }
 
+.widget-guide-note {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid rgba(121, 200, 210, .48);
+  border-radius: 0 7px 7px 0;
+  background: rgba(121, 200, 210, .045);
+  color: #9caac2;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.widgy-guide-card .widget-guide-note {
+  border-left-color: rgba(242, 195, 108, .55);
+  background: rgba(242, 195, 108, .045);
+}
+
 .widget-downloads {
   display: grid;
   gap: 8px;
