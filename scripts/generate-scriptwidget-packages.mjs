@@ -49,7 +49,7 @@ async function writeProjectFiles(definition, runtimeTemplate, generatedAt) {
     formatVersion: 2,
     id: definition.id,
     name: definition.name,
-    version: "1.10.5",
+    version: "1.10.6",
     runtimeVersion: "1.0",
     entry: "main.jsx",
     supportedFamilies: ["systemSmall", "systemMedium", "systemLarge"],

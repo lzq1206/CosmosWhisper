@@ -23,17 +23,6 @@ async function availableSnapshotURL(url) {
   }
 }
 
-async function resolveSnapshotURL(primaryURL, fallbackURL) {
-  // Probe both hosts concurrently so an unavailable primary cannot consume
-  // the full execution budget before the fallback is checked. Prefer Pages
-  // whenever both hosts respond.
-  const [primary, fallback] = await Promise.all([
-    availableSnapshotURL(primaryURL),
-    availableSnapshotURL(fallbackURL)
-  ]);
-  return primary || fallback;
-}
-
 async function getCurrentLocation() {
   try {
     if (typeof $location === "undefined" || !$location.isAvailable()) return null;
@@ -41,7 +30,7 @@ async function getCurrentLocation() {
     const authorized = status === "authorizedWhenInUse" || status === "authorizedAlways";
     if (!authorized) return null;
     const value = await $location.current({
-      timeout: 2,
+      timeout: 1,
       maxAge: 86400,
       accuracy: "reduced",
       purposeKey: "ScriptWidgetLocation"
@@ -95,7 +84,8 @@ if (!CITY) {
   const snapshotPath = imageKind + "/" + CITY.id + "/" + snapshotKey + ".jpg?v=" + snapshotKey;
   const pagesURL = "https://lzq1206.github.io/CosmosWhisper/widget-snapshots/" + snapshotPath;
   const customDomainURL = "https://cosmos.rainywhisper.com/widget-snapshots/" + snapshotPath;
-  const imageURL = await resolveSnapshotURL(pagesURL, customDomainURL);
+  const imageURL = (await availableSnapshotURL(pagesURL))
+    || (await availableSnapshotURL(customDomainURL));
   // Every image includes the large-family background extension. Square widgets
   // crop only that extra background; large widgets show the complete dial.
   const imageMode = isSmallFamily || isLargeFamily ? "fill" : "fit";
