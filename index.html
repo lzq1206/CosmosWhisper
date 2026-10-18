@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#030817" />
     <meta name="description" content="CosmosWhisper：一张根据地点与时间变化的本地星图。" />
     <title>CosmosWhisper · 星图</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20261018.2" />
   </head>
   <body data-homepage="true">
     <section id="homepage-view" aria-label="CosmosWhisper 首页星图">
@@ -51,22 +51,28 @@
         <article class="widget-guide-card">
           <div class="widget-guide-card-heading">
             <div>
-              <p class="widget-guide-kicker">无指针 · 自动匹配附近城市</p>
+              <p class="widget-guide-kicker">无指针 · 下载时匹配附近城市</p>
               <h3>ScriptWidget 星盘</h3>
             </div>
             <span class="widget-guide-mark" aria-hidden="true">01</span>
           </div>
           <ol class="widget-guide-steps">
             <li>在 iPhone App Store 搜索并安装 <strong>ScriptWidget</strong>。</li>
-            <li>按需下载下面的 <code>.swt</code> 文件，在 iPhone“文件”App 中找到并点击下载文件，选择“使用 ScriptWidget 打开”。进入 ScriptWidget 查看星图刷新效果，再到 ScriptWidget 设置中允许定位与网络访问。</li>
+            <li>先点“匹配当前位置”或从列表手动选最近的代表城市，再下载对应的 <code>.swt</code> 文件。在 iPhone“文件”App 中点击下载文件，选择“使用 ScriptWidget 打开”。进入 ScriptWidget 查看星图刷新效果，并允许网络访问。</li>
             <li>长按主屏幕空白处，点左上角“＋”，搜索 ScriptWidget，选择与刚导入包相同的尺寸并添加小组件。</li>
             <li>长按小组件并选择“编辑小组件”：在脚本选项中选择刚导入的星图，将 <strong>Frequency</strong> 设为 <strong>10 分钟</strong>。</li>
           </ol>
-          <div class="widget-downloads" aria-label="下载 ScriptWidget 星盘文件">
-            <a href="./scriptwidget/exports/visible-sky.swt" download>下载可见天区版 <span aria-hidden="true">↓</span></a>
-            <a href="./scriptwidget/exports/active-planisphere.swt" download>下载活动星盘版 <span aria-hidden="true">↓</span></a>
+          <div class="widget-city-picker">
+            <button id="widget-detect-city" type="button">匹配当前位置</button>
+            <label for="widget-city-select">代表城市</label>
+            <select id="widget-city-select" aria-label="选择星盘代表城市"></select>
           </div>
-          <p class="widget-guide-note">ScriptWidget 免费，可无限添加星盘小组件；但无法实现指针功能。</p>
+          <p class="widget-city-status" id="widget-city-status" aria-live="polite">默认选择北京；可使用定位匹配附近城市，或从列表手动选择。</p>
+          <div class="widget-downloads" aria-label="下载 ScriptWidget 星盘文件">
+            <a href="./scriptwidget/exports/visible-sky-beijing.swt" data-city-package="visible-sky" download><span class="widget-download-label">下载可见天区版 · 北京</span><span aria-hidden="true">↓</span></a>
+            <a href="./scriptwidget/exports/active-planisphere-beijing.swt" data-city-package="active-planisphere" download><span class="widget-download-label">下载活动星盘版 · 北京</span><span aria-hidden="true">↓</span></a>
+          </div>
+          <p class="widget-guide-note">定位只在网页上匹配下载城市；组件运行时不请求定位。也可直接使用<a href="./scriptwidget/exports/visible-sky-beijing.swt" download>北京可见天区版</a>或<a href="./scriptwidget/exports/active-planisphere-beijing.swt" download>北京活动星盘版</a>。ScriptWidget 免费，可无限添加星盘小组件；但无法实现指针功能。</p>
         </article>
 
         <article class="widget-guide-card widgy-guide-card">
@@ -99,6 +105,6 @@
       </div>
     </section>
 
-    <script type="module" src="./src/main.js?v=20261018.1"></script>
+    <script type="module" src="./src/main.js?v=20261018.2"></script>
   </body>
 </html>

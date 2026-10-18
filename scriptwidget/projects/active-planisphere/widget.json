@@ -1,8 +1,8 @@
 {
   "formatVersion": 2,
-  "id": "com.lzq1206.cosmoswhisper.active-planisphere",
-  "name": "CosmosWhisper · 活动星盘",
-  "version": "1.10.6",
+  "id": "com.lzq1206.cosmoswhisper.active-planisphere.beijing",
+  "name": "CosmosWhisper · 活动星盘 · 北京",
+  "version": "1.11.0",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
   "supportedFamilies": [
@@ -11,7 +11,6 @@
     "systemLarge"
   ],
   "permissions": [
-    "location",
     "network"
   ],
   "networkDomains": [
@@ -19,15 +18,15 @@
     "cosmos.rainywhisper.com"
   ],
   "plugins": [],
-  "description": "网页 Watch 风格的城市活动星盘底图。",
+  "description": "网页 Watch 风格的城市活动星盘底图。城市已固定为北京。",
   "category": "Astronomy",
   "tags": [
     "astronomy",
     "planisphere",
-    "nearest-city",
     "moon-phase",
     "solar-terms",
-    "web-snapshot"
+    "web-snapshot",
+    "beijing"
   ],
   "author": {
     "name": "lzq1206",

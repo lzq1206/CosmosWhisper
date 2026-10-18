@@ -1,2 +1,2 @@
-2026-10-18T15:26:22.422Z
-城市页面截图由 GitHub Actions 每 3 小时检查并补齐未来 12 小时的 15 分钟时刻；ScriptWidget 选择最近时刻的底图。WidgetKit 的实际刷新时间由 ScriptWidget 和系统调度。
+2026-10-18T15:45:07.213Z
+固定城市：北京。组件读取 GitHub Actions 维护的滚动星图截图。

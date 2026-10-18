@@ -6,6 +6,7 @@ import {
   solarAltitude,
 } from "./astro.js";
 import { SkyRenderer } from "./renderer.js?v=20261017.6";
+import { WIDGET_CITIES } from "./data/cities.js";
 
 const DEFAULT_LOCATION = {
   lat: 31.2,
@@ -260,6 +261,102 @@ function requestLocation() {
   );
 }
 
+function nearestWidgetCity(latitude, longitude) {
+  let nearest = WIDGET_CITIES[0];
+  let nearestDistance = Infinity;
+  const degrees = Math.PI / 180;
+  for (const city of WIDGET_CITIES) {
+    const latitude1 = latitude * degrees;
+    const latitude2 = city.lat * degrees;
+    const deltaLatitude = (city.lat - latitude) * degrees;
+    const deltaLongitude = (city.lon - longitude) * degrees;
+    const a = Math.sin(deltaLatitude / 2) ** 2
+      + Math.cos(latitude1) * Math.cos(latitude2) * Math.sin(deltaLongitude / 2) ** 2;
+    const distance = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    if (distance < nearestDistance) {
+      nearest = city;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+}
+
+function initializeScriptWidgetDownloads() {
+  const citySelect = document.querySelector("#widget-city-select");
+  const locateButton = document.querySelector("#widget-detect-city");
+  const status = document.querySelector("#widget-city-status");
+  const packageLinks = [...document.querySelectorAll("[data-city-package]")];
+  if (!citySelect || !locateButton || !status || packageLinks.length === 0) return;
+
+  const citiesById = new Map(WIDGET_CITIES.map((city) => [city.id, city]));
+  for (const city of WIDGET_CITIES) {
+    const option = document.createElement("option");
+    option.value = city.id;
+    option.textContent = city.name;
+    citySelect.append(option);
+  }
+
+  let selectedCityId = "beijing";
+  try {
+    const savedCityId = localStorage.getItem("cosmos-whisper-scriptwidget-city");
+    if (citiesById.has(savedCityId)) selectedCityId = savedCityId;
+  } catch {
+    selectedCityId = "beijing";
+  }
+
+  function selectCity(cityId, message) {
+    const city = citiesById.get(cityId) || citiesById.get("beijing");
+    citySelect.value = city.id;
+    for (const link of packageLinks) {
+      const kind = link.dataset.cityPackage;
+      link.href = "./scriptwidget/exports/" + kind + "-" + city.id + ".swt";
+      const label = link.querySelector(".widget-download-label");
+      if (label) label.textContent = "下载" + (kind === "visible-sky" ? "可见天区版" : "活动星盘版") + " · " + city.name;
+    }
+    try {
+      localStorage.setItem("cosmos-whisper-scriptwidget-city", city.id);
+    } catch {
+      // The selected city remains active for this page even if storage is unavailable.
+    }
+    if (message) status.textContent = message;
+  }
+
+  selectCity(selectedCityId, "当前选择" + citiesById.get(selectedCityId).name + "；可请求定位或从列表手动选择。");
+  citySelect.addEventListener("change", () => {
+    const city = citiesById.get(citySelect.value);
+    selectCity(city.id, "已选择" + city.name + "；下方下载文件已更新。");
+  });
+
+  locateButton.addEventListener("click", () => {
+    if (state.location.source === "browser") {
+      const city = nearestWidgetCity(state.location.lat, state.location.lon);
+      selectCity(city.id, "定位匹配到" + city.name + "；下方下载文件已更新。城市仅在此网页选择，不会写入组件定位权限。");
+      return;
+    }
+    if (!navigator.geolocation) {
+      status.textContent = "当前浏览器无法提供定位；请从城市列表手动选择。";
+      return;
+    }
+    locateButton.disabled = true;
+    locateButton.textContent = "正在定位…";
+    status.textContent = "正在根据浏览器定位匹配附近代表城市…";
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const city = nearestWidgetCity(position.coords.latitude, position.coords.longitude);
+        selectCity(city.id, "定位匹配到" + city.name + "；下方下载文件已更新。城市仅在此网页选择，不会写入组件定位权限。");
+        locateButton.disabled = false;
+        locateButton.textContent = "匹配当前位置";
+      },
+      () => {
+        status.textContent = "浏览器未能定位；请从城市列表手动选择（当前" + citiesById.get(citySelect.value).name + "）。";
+        locateButton.disabled = false;
+        locateButton.textContent = "匹配当前位置";
+      },
+      { enableHighAccuracy: false, maximumAge: 300000, timeout: 12000 },
+    );
+  });
+}
+
 function handleShortcut(event) {
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   const key = event.key.toLowerCase();
@@ -307,6 +404,8 @@ window.addEventListener("resize", render);
 window.addEventListener("visibilitychange", () => {
   if (!document.hidden) render();
 });
+
+initializeScriptWidgetDownloads();
 
 if (!hasFixedSnapshotDate) {
   setInterval(() => {
