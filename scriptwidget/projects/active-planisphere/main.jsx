@@ -8,12 +8,16 @@ const CITY_CATALOG = [{"id":"beijing","name":"北京","lat":39.9042,"lon":116.40
 
 const DEG = Math.PI / 180;
 
-async function fetchSnapshotBase64(url) {
+async function availableSnapshotURL(url) {
   try {
-    const image = await fetch(url, { responseType: "base64", timeoutInterval: 3 });
-    // The JPEG signature prevents an HTTP error page from being mistaken for
-    // a successful image response by ScriptWidget's text-based fetch API.
-    return typeof image === "string" && image.startsWith("/9j/") ? image : null;
+    // Probe only the JPEG header. The final image stays on ScriptWidget's
+    // resizable remote-image path so it scales to the widget's full frame.
+    const signature = await fetch(url, {
+      headers: { Range: "bytes=0-2" },
+      responseType: "base64",
+      timeoutInterval: 3
+    });
+    return typeof signature === "string" && signature.startsWith("/9j/") ? url : null;
   } catch (error) {
     return null;
   }
@@ -81,16 +85,16 @@ if (!CITY) {
   const snapshotPath = imageKind + "/" + CITY.id + "/" + snapshotKey + ".jpg?v=" + snapshotKey;
   const pagesURL = "https://lzq1206.github.io/CosmosWhisper/widget-snapshots/" + snapshotPath;
   const customDomainURL = "https://cosmos.rainywhisper.com/widget-snapshots/" + snapshotPath;
-  const imageBase64 = (await fetchSnapshotBase64(pagesURL))
-    || (await fetchSnapshotBase64(customDomainURL));
+  const imageURL = (await availableSnapshotURL(pagesURL))
+    || (await availableSnapshotURL(customDomainURL));
   // Every image includes the large-family background extension. Square widgets
   // crop only that extra background; large widgets show the complete dial.
   const imageMode = isSmallFamily || isLargeFamily ? "fill" : "fit";
-  if (imageBase64) {
+  if (imageURL) {
     $render(
       <zstack frame="max" alignment="center" background="#030817">
         <image
-          url={"data:image/jpeg;base64," + imageBase64}
+          url={imageURL}
           frame="max"
           mode={imageMode}
           clip="rect"
