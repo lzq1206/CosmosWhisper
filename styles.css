@@ -376,6 +376,25 @@ body {
   font-size: 11px;
 }
 
+.widgy-directory-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-top: 14px;
+  padding: 0 14px;
+  border: 1px solid rgba(242, 195, 108, .35);
+  border-radius: 999px;
+  color: #f2d79c;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.widgy-directory-link:hover {
+  border-color: #f2c36c;
+  background: rgba(242, 195, 108, .08);
+}
+
 @media (max-width: 700px) {
   .widget-guide-grid {
     grid-template-columns: 1fr;
