@@ -37,7 +37,7 @@ function buildDefinition(type, city) {
     folder: type.folder + "-" + city.id,
     projectFolder: city.id === "beijing" ? type.folder : null,
     name: type.name + " · " + city.name,
-    id: type.id + "." + city.id,
+    id: city.id === "beijing" ? type.id : type.id + "." + city.id,
     description: type.description + "城市已固定为" + city.name + "。",
     filename: type.folder + "-" + city.id + ".swt",
   };
