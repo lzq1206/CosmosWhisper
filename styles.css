@@ -295,6 +295,11 @@ body {
   font: 11px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
+.widget-guide-steps strong {
+  color: #f2d79c;
+  font-weight: 600;
+}
+
 .widget-downloads {
   display: grid;
   gap: 8px;
