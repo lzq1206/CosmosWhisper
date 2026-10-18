@@ -82,3 +82,11 @@ export const CITIES = [
 ];
 
 export const CITY_BY_ID = new Map(CITIES.map((entry) => [entry.id, entry]));
+
+// ScriptWidget snapshots are generated only for regional capitals and
+// municipalities to keep the rolling image set manageable.
+export const WIDGET_CITIES = CITIES.filter((entry) =>
+  entry.group === "直辖市"
+  || entry.group === "省会与自治区首府"
+  || entry.id === "taipei"
+);

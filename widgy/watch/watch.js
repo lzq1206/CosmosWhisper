@@ -6,10 +6,13 @@ import { CITY_BY_ID } from "../../src/data/cities.js";
 
 const canvas = document.querySelector("#watch-canvas");
 const status = document.querySelector("#watch-status");
-const cityId = new URLSearchParams(window.location.search).get("city") || "beijing";
+const query = new URLSearchParams(window.location.search);
+const cityId = query.get("city") || "beijing";
 const city = CITY_BY_ID.get(cityId) || CITY_BY_ID.get("beijing");
 const ctx = canvas.getContext("2d");
-const state = { date: new Date(), latitudeSign: city.lat >= 0 ? 1 : -1, timeRing: null };
+const snapshotTimestamp = Number(query.get("at"));
+const hasFixedSnapshotDate = Number.isFinite(snapshotTimestamp) && snapshotTimestamp > 0;
+const state = { date: hasFixedSnapshotDate ? new Date(snapshotTimestamp) : new Date(), latitudeSign: city.lat >= 0 ? 1 : -1, timeRing: null };
 const WATCH_ROTATION = 90 * DEG;
 const BEIJING_YEAR_FORMATTER = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Shanghai", year: "numeric" });
 const BEIJING_UTC_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -675,5 +678,5 @@ function render() {
 }
 
 window.addEventListener("resize", render);
-setInterval(() => { state.date = new Date(); render(); }, 1000);
+if (!hasFixedSnapshotDate) setInterval(() => { state.date = new Date(); render(); }, 1000);
 requestAnimationFrame(render);

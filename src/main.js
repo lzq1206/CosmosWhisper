@@ -23,9 +23,11 @@ const TWILIGHT_BANDS = [
 const canvas = document.querySelector("#sky-canvas");
 const canvasStatus = document.querySelector("#canvas-status");
 const renderer = new SkyRenderer(canvas);
+const snapshotTimestamp = Number(new URLSearchParams(window.location.search).get("at"));
+const hasFixedSnapshotDate = Number.isFinite(snapshotTimestamp) && snapshotTimestamp > 0;
 
 const state = {
-  date: new Date(),
+  date: hasFixedSnapshotDate ? new Date(snapshotTimestamp) : new Date(),
   location: loadLocation() ?? { ...DEFAULT_LOCATION },
   timeRing: null,
   bodies: [],
@@ -306,10 +308,12 @@ window.addEventListener("visibilitychange", () => {
   if (!document.hidden) render();
 });
 
-setInterval(() => {
-  state.date = new Date();
-  render();
-}, 1000);
+if (!hasFixedSnapshotDate) {
+  setInterval(() => {
+    state.date = new Date();
+    render();
+  }, 1000);
+}
 
 requestAnimationFrame(() => {
   render();

@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CITIES } from "../src/data/cities.js";
+import { WIDGET_CITIES } from "../src/data/cities.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PROJECTS = path.join(ROOT, "scriptwidget", "projects");
@@ -35,7 +35,7 @@ async function writeProjectFiles(definition, runtimeTemplate, generatedAt) {
   const imageDirectory = path.join(project, "image");
   const runtimeSource = runtimeTemplate
     .replace('"__PACKAGE_KIND__"', JSON.stringify(definition.folder))
-    .replace("__CITY_CATALOG__", JSON.stringify(CITIES.map(({ id, name, lat, lon }) => ({ id, name, lat, lon }))))
+    .replace("__CITY_CATALOG__", JSON.stringify(WIDGET_CITIES.map(({ id, name, lat, lon }) => ({ id, name, lat, lon }))))
     .trimEnd() + "\n";
   if (runtimeSource.includes("__PACKAGE_KIND__") || runtimeSource.includes("__CITY_CATALOG__")) {
     throw new Error("Could not populate the ScriptWidget runtime template.");
@@ -49,7 +49,7 @@ async function writeProjectFiles(definition, runtimeTemplate, generatedAt) {
     formatVersion: 2,
     id: definition.id,
     name: definition.name,
-    version: "1.9.6",
+    version: "1.10.0",
     runtimeVersion: "1.0",
     entry: "main.jsx",
     supportedFamilies: ["systemSmall", "systemMedium", "systemLarge"],
@@ -67,13 +67,13 @@ async function writeProjectFiles(definition, runtimeTemplate, generatedAt) {
   await writeFile(
     path.join(project, "README.md"),
     "# " + definition.name + "\n\n" + definition.readme
-      + "\n\n截图在网页画布加载后等待 5 秒再生成，按设备像素导出 1024×1024 高分辨率底图。大尺寸另生成适配竖向组件的扩展底图，通过增加同色背景铺满组件且不拉伸或裁切圆形星盘。GitHub Actions 每 15 分钟更新一次城市图片。小尺寸方形组件填满显示；中尺寸等比适配且保留完整星盘。小组件只显示星盘底图，不叠加指针或数字时间。"
+      + "\n\n网页画布加载后等待 5 秒再截图，生成适配大尺寸小组件比例的 1024×1090 高分辨率底图。GitHub Actions 每 3 小时检查未来 12 小时的 15 分钟时刻，只生成缺少的图片；小组件按当前时间选取最近时刻的快照。城市匹配范围为省会、自治区首府、直辖市和台北。小尺寸方形组件填满显示；中尺寸等比适配且保留完整星盘。小组件只显示星盘底图，不叠加指针或数字时间。"
       + "\n\n小组件需要定位和网络权限。定位结果会匹配仓库内最近的城市页面；网络权限用于读取该城市的截图。系统实际刷新小组件的时间由 ScriptWidget 和 WidgetKit 管理。"
       + "\n\n导入文件：scriptwidget/exports/" + definition.folder + ".swt\n"
   );
   await writeFile(
     path.join(project, "generated-at.txt"),
-    generatedAt + "\n城市页面截图由 GitHub Actions 按 15 分钟计划更新；该周期是图片发布时间，不代表 WidgetKit 会精确按 15 分钟刷新显示。\n"
+    generatedAt + "\n城市页面截图由 GitHub Actions 每 3 小时检查并补齐未来 12 小时的 15 分钟时刻；ScriptWidget 选择最近时刻的底图。WidgetKit 的实际刷新时间由 ScriptWidget 和系统调度。\n"
   );
 }
 
@@ -115,8 +115,8 @@ for (const definition of packageDefinitions) {
 const readme = "# ScriptWidget packages\n\n"
   + "- exports/visible-sky.swt — 可见天区版\n"
   + "- exports/active-planisphere.swt — 活动星盘版\n\n"
-  + "星盘底图直接使用对应网页城市页面的截图，按设备像素导出 1024×1024 高分辨率图片。大尺寸另生成适配竖向组件的扩展底图，通过增加同色背景铺满组件且不拉伸或裁切圆形星盘。截图在网页画布加载后等待 5 秒，并每 15 分钟更新每个城市的可见天区和 Watch 星盘图片。小组件按设备定位选择最近城市，只显示星盘底图，不叠加指针或数字时间。小尺寸方形组件填满显示；中尺寸等比适配完整星盘。\n\n"
-  + "导入时需要允许 ScriptWidget 访问定位和 raw.githubusercontent.com 网络图片。截图发布计划为每 15 分钟一次，WidgetKit 对组件本身的刷新由 ScriptWidget 和系统调度，不保证严格每 15 分钟显示刷新。\n\n"
+  + "星盘底图来自对应网页城市页面的截图；网页画布加载后等待 5 秒，按设备像素导出适配大尺寸小组件的 1024×1090 高分辨率图片。GitHub Actions 每 3 小时检查未来 12 小时的 15 分钟时刻，只生成缺少的图片，并清理已过期图片。ScriptWidget 根据设备定位，在省会、自治区首府、直辖市和台北中选择最近城市；按当前时间使用最近时刻的快照。小组件只显示星盘底图，不叠加指针或数字时间。小尺寸方形组件填满显示；中尺寸等比适配完整星盘。\n\n"
+  + "导入时需要允许 ScriptWidget 访问定位和 raw.githubusercontent.com 网络图片。图片计划每 3 小时补齐未来 12 小时；WidgetKit 对小组件本身的刷新由 ScriptWidget 和系统调度。\n\n"
   + "用 npm run generate:scriptwidget 重新生成两个项目目录和 SWT 文件。也可以把 projects/visible-sky 或 projects/active-planisphere 作为文件夹放进 ScriptWidget Scripts 目录。\n";
 await writeFile(path.join(ROOT, "scriptwidget", "README.md"), readme);
 

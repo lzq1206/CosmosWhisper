@@ -1,6 +1,6 @@
 /**
  * CosmosWhisper ScriptWidget packages.
- * The dial image is captured from the matching city page every 15 minutes.
+ * The dial image is captured from the matching city page at quarter-hour times.
  * City screenshot with contained bounds, displayed without clock hands.
  */
 const PACKAGE_KIND = "__PACKAGE_KIND__";
@@ -64,12 +64,13 @@ if (!CITY) {
   const imageKind = PACKAGE_KIND === "visible-sky" ? "visible-sky" : "active-planisphere";
   const isLargeFamily = family.includes("large");
   const isSmallFamily = family.includes("small");
-  const imageDirectory = isLargeFamily ? imageKind + "-large" : imageKind;
-  // Rotate the cache key five minutes after each scheduled snapshot run starts.
-  const refreshVersion = Math.floor((Date.now() - 12 * 60 * 1000) / 900000);
+  const slotMilliseconds = 15 * 60 * 1000;
+  const nearestSnapshot = Math.round(Date.now() / slotMilliseconds) * slotMilliseconds;
+  const snapshotKey = new Date(nearestSnapshot).toISOString().slice(0, 16).replace(/[-:]/g, "") + "Z";
   const imageURL = "https://raw.githubusercontent.com/lzq1206/CosmosWhisper/widget-snapshots/"
-    + imageDirectory + "/" + CITY.id + ".jpg?v=" + refreshVersion;
-  // The tall large-family asset fills the widget while preserving the round dial.
+    + imageKind + "/" + CITY.id + "/" + snapshotKey + ".jpg?v=" + snapshotKey;
+  // Every image includes the large-family background extension. Square widgets
+  // crop only that extra background; large widgets show the complete dial.
   const imageMode = isSmallFamily || isLargeFamily ? "fill" : "fit";
   $render(
     <zstack frame="max" alignment="center" background="#030817">
