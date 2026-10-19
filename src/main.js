@@ -26,10 +26,19 @@ const canvasStatus = document.querySelector("#canvas-status");
 const renderer = new SkyRenderer(canvas);
 const snapshotTimestamp = Number(new URLSearchParams(window.location.search).get("at"));
 const hasFixedSnapshotDate = Number.isFinite(snapshotTimestamp) && snapshotTimestamp > 0;
+const queryParams = new URLSearchParams(window.location.search);
+const nativeLocationMode = document.body.dataset.nativeLocation === "true";
+const queryLatitude = Number(queryParams.get("lat"));
+const queryLongitude = Number(queryParams.get("lon"));
+const locationFromQuery = queryParams.has("lat") && queryParams.has("lon")
+  && Number.isFinite(queryLatitude) && Number.isFinite(queryLongitude)
+  && queryLatitude >= -90 && queryLatitude <= 90 && queryLongitude >= -180 && queryLongitude <= 180
+  ? { lat: queryLatitude, lon: queryLongitude, name: queryParams.get("name") || "当前位置", source: "device" }
+  : null;
 
 const state = {
   date: hasFixedSnapshotDate ? new Date(snapshotTimestamp) : new Date(),
-  location: loadLocation() ?? { ...DEFAULT_LOCATION },
+  location: locationFromQuery ?? (nativeLocationMode ? { ...DEFAULT_LOCATION } : loadLocation() ?? { ...DEFAULT_LOCATION }),
   timeRing: null,
   bodies: [],
   homepageMode: document.body.dataset.homepage === "true",
@@ -162,11 +171,13 @@ function currentPhase() {
 }
 
 function render() {
+  if (nativeLocationMode && !locationFromQuery) return;
   ensureTimeRing();
   state.bodies = planetaryBodies(state.date, state.location.lat, state.location.lon);
   const result = renderer.render(state);
   const lst = localSiderealHours(state.date, state.location.lon);
   canvasStatus.textContent = `${formatDate(state.date)}，${state.location.name}。可见 ${result.visibleCount} 颗五等及以上恒星，恒星时 ${formatHours(lst)}，${currentPhase()}。点击恒星选择，滚轮缩放。方位固定不随拖动改变。`;
+  window.CosmosWhisperRenderReady = true;
 }
 
 function coordinatesForPointer(event) {
@@ -414,7 +425,13 @@ if (!hasFixedSnapshotDate) {
   }, 1000);
 }
 
-requestAnimationFrame(() => {
-  render();
-  if (!loadLocation()) requestLocation();
-});
+if (nativeLocationMode && !locationFromQuery) {
+  canvasStatus.textContent = "等待手机位置以绘制本地星图。";
+  window.CosmosWhisperRenderReady = false;
+} else {
+  requestAnimationFrame(() => {
+    render();
+    window.CosmosWhisperRenderReady = true;
+    if (!nativeLocationMode && !loadLocation() && !locationFromQuery) requestLocation();
+  });
+}

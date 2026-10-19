@@ -7,8 +7,21 @@ import { CITY_BY_ID } from "../../src/data/cities.js";
 const canvas = document.querySelector("#watch-canvas");
 const status = document.querySelector("#watch-status");
 const query = new URLSearchParams(window.location.search);
+const nativeLocationMode = document.body.dataset.nativeLocation === "true";
 const cityId = query.get("city") || "beijing";
-const city = CITY_BY_ID.get(cityId) || CITY_BY_ID.get("beijing");
+const baseCity = CITY_BY_ID.get(cityId) || CITY_BY_ID.get("beijing");
+const queryLatitude = Number(query.get("lat"));
+const queryLongitude = Number(query.get("lon"));
+const hasDeviceLocation = query.has("lat") && query.has("lon")
+  && Number.isFinite(queryLatitude) && Number.isFinite(queryLongitude)
+  && queryLatitude >= -90 && queryLatitude <= 90
+  && queryLongitude >= -180 && queryLongitude <= 180;
+const city = {
+  ...baseCity,
+  lat: hasDeviceLocation ? queryLatitude : baseCity.lat,
+  lon: hasDeviceLocation ? queryLongitude : baseCity.lon,
+  name: query.get("name") || baseCity.name,
+};
 const ctx = canvas.getContext("2d");
 const snapshotTimestamp = Number(query.get("at"));
 const hasFixedSnapshotDate = Number.isFinite(snapshotTimestamp) && snapshotTimestamp > 0;
@@ -666,6 +679,7 @@ function drawPole() {
 }
 
 function render() {
+  if (nativeLocationMode && !hasDeviceLocation) return;
   if (!resize()) return;
   ensureTimeRing();
   ctx.clearRect(0, 0, metrics.width, metrics.height);
@@ -679,4 +693,12 @@ function render() {
 
 window.addEventListener("resize", render);
 if (!hasFixedSnapshotDate) setInterval(() => { state.date = new Date(); render(); }, 1000);
-requestAnimationFrame(render);
+if (nativeLocationMode && !hasDeviceLocation) {
+  status.textContent = "等待手机位置以绘制本地星图。";
+  window.CosmosWhisperRenderReady = false;
+} else {
+  requestAnimationFrame(() => {
+    render();
+    window.CosmosWhisperRenderReady = true;
+  });
+}

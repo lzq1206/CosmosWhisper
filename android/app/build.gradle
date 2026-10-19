@@ -1,0 +1,47 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+}
+
+android {
+    namespace "com.lzq1206.cosmoswhisper.android"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.lzq1206.cosmoswhisper.android"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    sourceSets {
+        main.assets.srcDir(layout.buildDirectory.dir("generated/cosmosOfflineAssets"))
+    }
+}
+
+dependencies {
+    implementation "androidx.webkit:webkit:1.12.1"
+}
+
+def repositoryRoot = rootProject.projectDir.parentFile
+tasks.register("generateCosmosOfflineAssets", Sync) {
+    from(new File(repositoryRoot, "src")) { into "src" }
+    from(new File(repositoryRoot, "widgy/watch/watch.js")) { into "widgy/watch" }
+    from(new File(repositoryRoot, "styles.css")) { into "." }
+    from(new File(projectDir, "../offline")) { into "offline" }
+    into layout.buildDirectory.dir("generated/cosmosOfflineAssets")
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("generateCosmosOfflineAssets")
+}

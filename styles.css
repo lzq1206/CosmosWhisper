@@ -250,6 +250,39 @@ body {
   border-color: rgba(242, 195, 108, .24);
 }
 
+.android-guide .widget-guide-grid {
+  grid-template-columns: minmax(0, 960px);
+}
+
+.android-guide-card {
+  border-color: rgba(121, 200, 210, .28);
+}
+
+.android-downloads {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.android-downloads a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(121, 200, 210, .35);
+  border-radius: 9px;
+  color: #c8e4e5;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.android-downloads a:hover {
+  border-color: rgba(121, 200, 210, .75);
+  background: rgba(121, 200, 210, .08);
+}
+
 .widget-guide-card-heading {
   display: flex;
   align-items: start;
@@ -475,5 +508,9 @@ body {
 
   .widgy-qr-item img {
     border-width: 4px;
+  }
+
+  .android-downloads {
+    grid-template-columns: 1fr;
   }
 }
