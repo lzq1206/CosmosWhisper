@@ -7,6 +7,11 @@ import { CITY_BY_ID } from "../../src/data/cities.js";
 const canvas = document.querySelector("#watch-canvas");
 const status = document.querySelector("#watch-status");
 const query = new URLSearchParams(window.location.search);
+const requestedRenderScale = Number(query.get("renderScale"));
+if (query.has("renderScale")) {
+  canvas.style.width = "360px";
+  canvas.style.height = "360px";
+}
 const nativeLocationMode = document.body.dataset.nativeLocation === "true";
 const cityId = query.get("city") || "beijing";
 const baseCity = CITY_BY_ID.get(cityId) || CITY_BY_ID.get("beijing");
@@ -67,7 +72,10 @@ const COLORS = {
 function resize() {
   const rect = canvas.getBoundingClientRect();
   if (!rect.width || !rect.height) return false;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const dpr = Number.isFinite(requestedRenderScale) && requestedRenderScale > 0
+    ? Math.min(requestedRenderScale, 4)
+    : Math.min(devicePixelRatio, 2);
   canvas.width = Math.round(rect.width * dpr);
   canvas.height = Math.round(rect.height * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

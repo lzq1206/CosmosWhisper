@@ -59,6 +59,15 @@ const GALACTIC_POLES = [
   [192.8595 / 15, 27.1283],
   [12.8595 / 15, -27.1283],
 ];
+const requestedRenderScale = Number(new URLSearchParams(window.location.search).get("renderScale"));
+
+function canvasPixelRatio() {
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  if (Number.isFinite(requestedRenderScale) && requestedRenderScale > 0) {
+    return Math.min(requestedRenderScale, 4);
+  }
+  return Math.min(devicePixelRatio, 2);
+}
 
 function pointInEvenOddRings(rings, point) {
   let inside = false;
@@ -118,7 +127,7 @@ export class SkyRenderer {
   resize(state) {
     const rect = this.canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelRatio = canvasPixelRatio();
     const width = Math.round(rect.width * pixelRatio);
     const height = Math.round(rect.height * pixelRatio);
     if (this.canvas.width !== width || this.canvas.height !== height || this.pixelRatio !== pixelRatio) {

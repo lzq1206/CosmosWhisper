@@ -100,11 +100,13 @@ open class PlanisphereWidgetProvider : AppWidgetProvider() {
         }
 
         private fun baseViews(context: Context, id: Int): RemoteViews {
-            val views = RemoteViews(context.packageName, R.layout.widget_planisphere)
+            val providerName = AppWidgetManager.getInstance(context).getAppWidgetInfo(id)?.provider?.className
+            val isLarge = VARIANTS.firstOrNull { it.providerClass.name == providerName }?.isLarge ?: true
+            val layout = if (isLarge) R.layout.widget_planisphere else R.layout.widget_planisphere_small
+            val views = RemoteViews(context.packageName, layout)
             val showClockHands = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean("widget-$id-clockHands", true)
             views.setViewVisibility(R.id.widget_clock, if (showClockHands) View.VISIBLE else View.GONE)
-            views.setViewVisibility(R.id.widget_clock_hub, if (showClockHands) View.VISIBLE else View.GONE)
             val intent = Intent(context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             val pending = PendingIntent.getActivity(

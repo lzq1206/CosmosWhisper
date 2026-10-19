@@ -1,0 +1,36 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:contentDescription="@string/widget_description">
+
+    <ImageView
+        android:id="@+id/widget_chart"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/widget_chart_description"
+        android:scaleType="fitCenter" />
+
+    <AnalogClock
+        android:id="@+id/widget_clock"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/widget_clock_description"
+        android:dial="@drawable/clock_dial_transparent"
+        android:hand_hour="@drawable/clock_hand_hour_small"
+        android:hand_minute="@drawable/clock_hand_minute_small"
+        android:scaleX="0.82"
+        android:scaleY="0.82" />
+
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/widget_status_background"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="@string/widget_loading"
+        android:textColor="#C9D4E5"
+        android:textSize="13sp" />
+</FrameLayout>

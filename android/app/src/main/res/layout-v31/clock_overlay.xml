@@ -14,9 +14,4 @@
         android:hand_minute="@drawable/clock_hand_minute"
         android:hand_second="@drawable/clock_hand_second" />
 
-    <View
-        android:layout_width="9dp"
-        android:layout_height="9dp"
-        android:layout_gravity="center"
-        android:background="@drawable/clock_hub" />
 </FrameLayout>

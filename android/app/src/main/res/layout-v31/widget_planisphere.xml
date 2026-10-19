@@ -20,15 +20,9 @@
         android:dial="@drawable/clock_dial_transparent"
         android:hand_hour="@drawable/clock_hand_hour"
         android:hand_minute="@drawable/clock_hand_minute"
-        android:hand_second="@drawable/clock_hand_second" />
-
-    <ImageView
-        android:id="@+id/widget_clock_hub"
-        android:layout_width="9dp"
-        android:layout_height="9dp"
-        android:layout_gravity="center"
-        android:contentDescription="@null"
-        android:src="@drawable/clock_hub" />
+        android:hand_second="@drawable/clock_hand_second"
+        android:scaleX="0.82"
+        android:scaleY="0.82" />
 
     <TextView
         android:id="@+id/widget_status"

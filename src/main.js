@@ -27,6 +27,10 @@ const renderer = new SkyRenderer(canvas);
 const snapshotTimestamp = Number(new URLSearchParams(window.location.search).get("at"));
 const hasFixedSnapshotDate = Number.isFinite(snapshotTimestamp) && snapshotTimestamp > 0;
 const queryParams = new URLSearchParams(window.location.search);
+if (queryParams.has("renderScale")) {
+  canvas.style.width = "360px";
+  canvas.style.height = "360px";
+}
 const nativeLocationMode = document.body.dataset.nativeLocation === "true";
 const queryLatitude = Number(queryParams.get("lat"));
 const queryLongitude = Number(queryParams.get("lon"));

@@ -12,13 +12,14 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import org.json.JSONTokener
 import java.util.Base64
+import kotlin.math.roundToInt
 
 object LocalWidgetRenderer {
     private const val MAX_RENDER_WAIT_MS = 15000L
     private const val CHECK_READY_JS =
         "window.CosmosWhisperRenderReady === true && !!document.querySelector('canvas') && document.querySelector('canvas').width > 0"
     private const val CAPTURE_JS =
-        "(function(){var c=document.querySelector('canvas');if(!c)return '';var w=c.toDataURL('image/webp',0.92);return w.indexOf('data:image/webp;')===0?w:c.toDataURL('image/png')})()"
+        "(function(){var c=document.querySelector('canvas');if(!c)return '';var w=c.toDataURL('image/webp',0.98);return w.indexOf('data:image/webp;')===0?w:c.toDataURL('image/png')})()"
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -64,7 +65,10 @@ object LocalWidgetRenderer {
                 }
                 val id = ids[index++]
                 val kind = prefs.getString("widget-$id-kind", idsByVariant[id]?.kind ?: "visible-sky") ?: "visible-sky"
-                val cacheKey = kind + ":" + latitude + ":" + longitude + ":" + timestamp / 60000L
+                val variant = idsByVariant[id]
+                val pixels = targetSidePixels(context, manager, id, variant?.isLarge ?: true)
+                val renderScale = (pixels / 360f).coerceIn(1f, 4f)
+                val cacheKey = kind + ":" + latitude + ":" + longitude + ":" + timestamp / 60000L + ":" + pixels
                 if (rendered.containsKey(cacheKey)) {
                     val bitmap = rendered[cacheKey]
                     if (bitmap != null) PlanisphereWidgetProvider.updateWidgetImage(context, id, bitmap, kind)
@@ -72,7 +76,7 @@ object LocalWidgetRenderer {
                     nextWidget()
                     return
                 }
-                renderOne(context, kind, latitude, longitude, name, timestamp) { bitmap ->
+                renderOne(context, kind, latitude, longitude, name, timestamp, pixels, renderScale) { bitmap ->
                     rendered[cacheKey] = bitmap
                     if (bitmap != null) PlanisphereWidgetProvider.updateWidgetImage(context, id, bitmap, kind)
                     else PlanisphereWidgetProvider.showWidgetStatus(context, id, "本地绘制失败 · 打开应用重试")
@@ -91,10 +95,10 @@ object LocalWidgetRenderer {
         longitude: Double,
         locationName: String,
         timestamp: Long,
+        pixels: Int,
+        renderScale: Float,
         onComplete: (Bitmap?) -> Unit
     ) {
-        val density = context.resources.displayMetrics.density
-        val pixels = (360f * density).toInt().coerceIn(360, 1080)
         val webView = try {
             WebView(ContextThemeWrapper(context, android.R.style.Theme_Material_NoActionBar))
         } catch (_: Exception) {
@@ -165,10 +169,41 @@ object LocalWidgetRenderer {
             "?lat=" + latitude +
             "&lon=" + longitude +
             "&name=" + Uri.encode(locationName) +
-            "&at=" + timestamp
+            "&at=" + timestamp +
+            "&renderScale=" + renderScale
         webView.loadUrl(url)
         mainHandler.postDelayed({
             if (!completed) finish(null)
         }, MAX_RENDER_WAIT_MS + 5000L)
+    }
+
+    private fun targetSidePixels(
+        context: Context,
+        manager: android.appwidget.AppWidgetManager,
+        id: Int,
+        isLarge: Boolean
+    ): Int {
+        val options = manager.getAppWidgetOptions(id)
+        val minWidth = options.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+        val minHeight = options.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+        val optionSideDp = if (minWidth > 0 && minHeight > 0) {
+            minOf(minWidth, minHeight)
+        } else if (isLarge) {
+            360
+        } else {
+            180
+        }
+        val sizedSideDp = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            options.getParcelableArrayList<android.util.SizeF>(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_SIZES)
+                ?.map { minOf(it.width, it.height).roundToInt() }
+                ?.filter { it > 0 }
+                ?.maxOrNull()
+        } else {
+            null
+        }
+        val sideDp = sizedSideDp ?: optionSideDp
+        return (sideDp * context.resources.displayMetrics.density)
+            .roundToInt()
+            .coerceIn(360, 1440)
     }
 }

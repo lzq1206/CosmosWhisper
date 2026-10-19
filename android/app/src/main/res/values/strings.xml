@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">CosmosWhisper 星盘</string>
+    <string name="app_name">WidgetWhisper</string>
     <string name="widget_name_large_visible_clock">CosmosWhisper · 4×4 · 可见天区 · 带指针</string>
     <string name="widget_name_large_visible_no_clock">CosmosWhisper · 4×4 · 可见天区 · 无指针</string>
     <string name="widget_name_large_active_clock">CosmosWhisper · 4×4 · 活动星图 · 带指针</string>
@@ -12,4 +12,9 @@
     <string name="widget_chart_description">CosmosWhisper 星盘图像</string>
     <string name="widget_clock_description">按本地时间运行的时针、分针和秒针</string>
     <string name="widget_loading">正在载入星图…</string>
+    <string name="widget_rocket_description">RocketWhisper 火箭预报地图小组件</string>
+    <string name="widget_rocket_loading">正在下载服务器生成的中国区域地图…</string>
+    <string name="widget_name_rocket_china_4x4">RocketWhisper · 中国 · 4×4</string>
+    <string name="widget_name_rocket_china_2x2">RocketWhisper · 中国 · 2×2</string>
+    <string name="widget_name_rocket_china_4x2">RocketWhisper · 中国 · 4×2</string>
 </resources>
