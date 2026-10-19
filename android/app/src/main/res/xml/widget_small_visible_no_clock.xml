@@ -1,0 +1,12 @@
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialKeyguardLayout="@layout/widget_planisphere"
+    android:initialLayout="@layout/widget_planisphere"
+    android:minHeight="110dp"
+    android:minWidth="110dp"
+    android:previewImage="@drawable/preview_small_visible_no_clock"
+    android:resizeMode="none"
+    android:targetCellHeight="2"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

@@ -4,7 +4,7 @@
     android:initialLayout="@layout/widget_planisphere"
     android:minHeight="250dp"
     android:minWidth="250dp"
-    android:previewImage="@drawable/app_icon"
+    android:previewImage="@drawable/preview_large_visible_clock"
     android:resizeMode="none"
     android:targetCellHeight="4"
     android:targetCellWidth="4"

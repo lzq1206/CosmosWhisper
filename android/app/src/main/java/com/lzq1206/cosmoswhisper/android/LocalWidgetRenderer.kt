@@ -18,25 +18,32 @@ object LocalWidgetRenderer {
     private const val CHECK_READY_JS =
         "window.CosmosWhisperRenderReady === true && !!document.querySelector('canvas') && document.querySelector('canvas').width > 0"
     private const val CAPTURE_JS =
-        "(function(){var c=document.querySelector('canvas');return c?c.toDataURL('image/jpeg',0.94):''})()"
+        "(function(){var c=document.querySelector('canvas');if(!c)return '';var w=c.toDataURL('image/webp',0.92);return w.indexOf('data:image/webp;')===0?w:c.toDataURL('image/png')})()"
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun renderAll(context: Context, onComplete: (() -> Unit)? = null) {
         mainHandler.post {
             val manager = android.appwidget.AppWidgetManager.getInstance(context)
-            val ids = listOf(
-                PlanisphereWidgetProvider::class.java,
-                SmallPlanisphereWidgetProvider::class.java
-            ).flatMap { provider ->
-                manager.getAppWidgetIds(android.content.ComponentName(context, provider)).toList()
-            }.distinct().toIntArray()
+            val prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+            val idsByVariant = LinkedHashMap<Int, PlanisphereWidgetVariant>()
+            PlanisphereWidgetProvider.VARIANTS.forEach { variant ->
+                manager.getAppWidgetIds(android.content.ComponentName(context, variant.providerClass)).forEach { id ->
+                    val kindKey = "widget-$id-kind"
+                    val handsKey = "widget-$id-clockHands"
+                    val editor = prefs.edit()
+                    if (!prefs.contains(kindKey)) editor.putString(kindKey, variant.kind)
+                    if (!prefs.contains(handsKey)) editor.putBoolean(handsKey, variant.clockHands)
+                    editor.apply()
+                    idsByVariant[id] = variant
+                }
+            }
+            val ids = idsByVariant.keys.toIntArray()
             if (ids.isEmpty()) {
                 onComplete?.invoke()
                 return@post
             }
 
-            val prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
             val latitude = prefs.getString(MainActivity.KEY_LOCATION_LATITUDE, null)?.toDoubleOrNull()
             val longitude = prefs.getString(MainActivity.KEY_LOCATION_LONGITUDE, null)?.toDoubleOrNull()
             if (latitude == null || longitude == null || latitude !in -90.0..90.0 || longitude !in -180.0..180.0) {
@@ -56,8 +63,7 @@ object LocalWidgetRenderer {
                     return
                 }
                 val id = ids[index++]
-                val kind = prefs.getString("widget-" + id + "-kind", prefs.getString(MainActivity.KEY_DEFAULT_KIND, "visible-sky"))
-                    ?: "visible-sky"
+                val kind = prefs.getString("widget-$id-kind", idsByVariant[id]?.kind ?: "visible-sky") ?: "visible-sky"
                 val cacheKey = kind + ":" + latitude + ":" + longitude + ":" + timestamp / 60000L
                 if (rendered.containsKey(cacheKey)) {
                     val bitmap = rendered[cacheKey]

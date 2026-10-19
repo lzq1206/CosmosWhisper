@@ -17,6 +17,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -28,6 +30,8 @@ class MainActivity : Activity() {
     private lateinit var locationLabel: TextView
     private lateinit var visibleButton: Button
     private lateinit var activeButton: Button
+    private lateinit var clockPreviewCheckBox: CheckBox
+    private lateinit var clockOverlay: View
     private var currentKind = "visible-sky"
     private var pendingNativeLocation = false
 
@@ -64,6 +68,14 @@ class MainActivity : Activity() {
         visibleButton.setOnClickListener { loadChart("visible-sky") }
         activeButton.setOnClickListener { loadChart("active-planisphere") }
 
+        clockPreviewCheckBox = CheckBox(this).apply {
+            text = "显示时针、分针和秒针"
+            setTextColor(Color.rgb(225, 232, 242))
+            isChecked = prefs.getBoolean(KEY_DEFAULT_CLOCK_HANDS, true)
+            buttonTintList = android.content.res.ColorStateList.valueOf(Color.rgb(205, 217, 233))
+        }
+        root.addView(clockPreviewCheckBox.withBottom(dp(2)))
+
         chartView = WebView(this)
         chartView.setBackgroundColor(Color.rgb(3, 8, 23))
         chartView.settings.javaScriptEnabled = true
@@ -71,7 +83,20 @@ class MainActivity : Activity() {
         chartView.settings.allowFileAccess = false
         chartView.settings.allowContentAccess = false
         chartView.webViewClient = OfflineWebViewSupport.createClient(this)
-        root.addView(chartView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply {
+        val chartContainer = FrameLayout(this).apply { setBackgroundColor(Color.rgb(3, 8, 23)) }
+        chartContainer.addView(chartView, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+        clockOverlay = layoutInflater.inflate(R.layout.clock_overlay, chartContainer, false).apply {
+            visibility = if (clockPreviewCheckBox.isChecked) View.VISIBLE else View.GONE
+        }
+        chartContainer.addView(clockOverlay)
+        clockPreviewCheckBox.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean(KEY_DEFAULT_CLOCK_HANDS, checked).apply()
+            clockOverlay.visibility = if (checked) View.VISIBLE else View.GONE
+        }
+        root.addView(chartContainer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply {
             topMargin = dp(8)
             bottomMargin = dp(8)
         })
@@ -186,7 +211,19 @@ class MainActivity : Activity() {
             setSelection(0)
         }
         content.addView(sizeSpinner)
-        content.addView(text("下一步可选择是否显示时针、分针和秒针（默认开启）。", 11, Color.rgb(145, 161, 188), false))
+        val widgetClockCheckBox = CheckBox(this).apply {
+            text = "显示时针、分针和秒针"
+            setTextColor(Color.rgb(225, 232, 242))
+            buttonTintList = android.content.res.ColorStateList.valueOf(Color.rgb(205, 217, 233))
+            isChecked = clockPreviewCheckBox.isChecked
+        }
+        content.addView(widgetClockCheckBox)
+        content.addView(text(
+            "若当前页已满，请回到桌面长按空白处打开小组件列表，先滑到后续空白页再添加；也可添加后长按组件并拖到下一页。",
+            11,
+            Color.rgb(145, 161, 188),
+            false
+        ))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             content.addView(text("当前 Android 版本可显示时针和分针；秒针需要 Android 12 或更新版本。", 11, Color.rgb(145, 161, 188), false))
         }
@@ -197,22 +234,23 @@ class MainActivity : Activity() {
             .setNegativeButton("取消", null)
             .setPositiveButton("继续") { _, _ ->
                 val isLarge = sizeSpinner.selectedItemPosition == 0
-                addSelectedWidgetToHomeScreen(isLarge)
+                addSelectedWidgetToHomeScreen(isLarge, widgetClockCheckBox.isChecked)
             }
             .show()
     }
 
-    private fun addSelectedWidgetToHomeScreen(isLarge: Boolean) {
+    private fun addSelectedWidgetToHomeScreen(isLarge: Boolean, showClockHands: Boolean) {
         val manager = AppWidgetManager.getInstance(this)
-        val providerClass = if (isLarge) PlanisphereWidgetProvider::class.java else SmallPlanisphereWidgetProvider::class.java
+        val providerClass = PlanisphereWidgetProvider.providerFor(isLarge, currentKind, showClockHands)
         val provider = ComponentName(this, providerClass)
         if (!manager.isRequestPinAppWidgetSupported) {
-            toast("当前桌面不支持应用内直接添加。请长按桌面空白处，打开“小组件”并选择 CosmosWhisper。")
+            toast("当前桌面不支持应用内直接添加。请长按空白处打开“小组件”，滑到有空间的页面后选择对应的 CosmosWhisper 版本。")
             return
         }
 
         val callbackIntent = Intent(this, PinWidgetReceiver::class.java)
             .putExtra(PinWidgetReceiver.EXTRA_KIND, currentKind)
+            .putExtra(PinWidgetReceiver.EXTRA_CLOCK_HANDS, showClockHands)
         val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
         val requestCode = System.nanoTime().toInt()
         val callback = PendingIntent.getBroadcast(
@@ -231,7 +269,7 @@ class MainActivity : Activity() {
             val size = if (isLarge) "大组件" else "小组件"
             toast("已选择$title · $size；请在桌面弹出的系统确认中点“添加”。")
         } else {
-            toast("桌面没有接受添加请求。请长按桌面空白处，打开“小组件”并选择 CosmosWhisper。")
+            toast("桌面没有接受添加请求。请长按空白处打开“小组件”，切换到后续空白页后选择对应的 CosmosWhisper 版本。")
         }
     }
 
@@ -289,6 +327,7 @@ class MainActivity : Activity() {
     companion object {
         const val PREFS_NAME = "widget-settings"
         const val KEY_DEFAULT_KIND = "defaultKind"
+        const val KEY_DEFAULT_CLOCK_HANDS = "defaultClockHands"
         const val KEY_LOCATION_LATITUDE = "phoneLatitude"
         const val KEY_LOCATION_LONGITUDE = "phoneLongitude"
         const val KEY_LOCATION_NAME = "phoneLocationName"

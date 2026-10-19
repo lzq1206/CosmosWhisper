@@ -1,7 +1,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#030817"
+    android:background="@android:color/transparent"
     android:contentDescription="@string/widget_description">
 
     <ImageView
@@ -12,20 +12,16 @@
         android:contentDescription="@string/widget_chart_description"
         android:scaleType="fitCenter" />
 
-    <AnalogClock
-        android:id="@+id/widget_clock"
+    <include
+        layout="@layout/clock_overlay"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:contentDescription="@string/widget_clock_description"
-        android:dial="@drawable/clock_dial_transparent"
-        android:hand_hour="@drawable/clock_hand_hour"
-        android:hand_minute="@drawable/clock_hand_minute" />
+        android:layout_height="match_parent" />
 
     <TextView
         android:id="@+id/widget_status"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#CC030817"
+        android:background="@drawable/widget_status_background"
         android:gravity="center"
         android:padding="16dp"
         android:text="@string/widget_loading"

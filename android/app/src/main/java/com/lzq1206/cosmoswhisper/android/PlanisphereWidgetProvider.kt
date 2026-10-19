@@ -22,9 +22,9 @@ open class PlanisphereWidgetProvider : AppWidgetProvider() {
 
     override fun onDisabled(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
-        val hasLargeWidgets = manager.getAppWidgetIds(ComponentName(context, PlanisphereWidgetProvider::class.java)).isNotEmpty()
-        val hasSmallWidgets = manager.getAppWidgetIds(ComponentName(context, SmallPlanisphereWidgetProvider::class.java)).isNotEmpty()
-        if (hasLargeWidgets || hasSmallWidgets) return
+        if (VARIANTS.any { variant ->
+                manager.getAppWidgetIds(ComponentName(context, variant.providerClass)).isNotEmpty()
+            }) return
         try {
             context.getSystemService(android.app.job.JobScheduler::class.java)
                 .cancel(WidgetRefreshJobService.JOB_ID)
@@ -48,6 +48,22 @@ open class PlanisphereWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        val VARIANTS = listOf(
+            PlanisphereWidgetVariant(PlanisphereWidgetProvider::class.java, "visible-sky", true, true),
+            PlanisphereWidgetVariant(LargeVisibleNoClockWidgetProvider::class.java, "visible-sky", false, true),
+            PlanisphereWidgetVariant(LargeActiveClockWidgetProvider::class.java, "active-planisphere", true, true),
+            PlanisphereWidgetVariant(LargeActiveNoClockWidgetProvider::class.java, "active-planisphere", false, true),
+            PlanisphereWidgetVariant(SmallPlanisphereWidgetProvider::class.java, "visible-sky", true, false),
+            PlanisphereWidgetVariant(SmallVisibleNoClockWidgetProvider::class.java, "visible-sky", false, false),
+            PlanisphereWidgetVariant(SmallActiveClockWidgetProvider::class.java, "active-planisphere", true, false),
+            PlanisphereWidgetVariant(SmallActiveNoClockWidgetProvider::class.java, "active-planisphere", false, false)
+        )
+
+        fun providerFor(isLarge: Boolean, kind: String, clockHands: Boolean): Class<out PlanisphereWidgetProvider> =
+            VARIANTS.first {
+                it.isLarge == isLarge && it.kind == kind && it.clockHands == clockHands
+            }.providerClass
+
         fun scheduleRefresh(context: Context) {
             val component = ComponentName(context, WidgetRefreshJobService::class.java)
             val job = android.app.job.JobInfo.Builder(WidgetRefreshJobService.JOB_ID, component)
@@ -104,3 +120,16 @@ open class PlanisphereWidgetProvider : AppWidgetProvider() {
 }
 
 class SmallPlanisphereWidgetProvider : PlanisphereWidgetProvider()
+class LargeVisibleNoClockWidgetProvider : PlanisphereWidgetProvider()
+class LargeActiveClockWidgetProvider : PlanisphereWidgetProvider()
+class LargeActiveNoClockWidgetProvider : PlanisphereWidgetProvider()
+class SmallVisibleNoClockWidgetProvider : PlanisphereWidgetProvider()
+class SmallActiveClockWidgetProvider : PlanisphereWidgetProvider()
+class SmallActiveNoClockWidgetProvider : PlanisphereWidgetProvider()
+
+data class PlanisphereWidgetVariant(
+    val providerClass: Class<out PlanisphereWidgetProvider>,
+    val kind: String,
+    val clockHands: Boolean,
+    val isLarge: Boolean
+)

@@ -1,7 +1,13 @@
 <resources>
     <string name="app_name">CosmosWhisper 星盘</string>
-    <string name="widget_name_large">CosmosWhisper 星盘 · 大组件</string>
-    <string name="widget_name_small">CosmosWhisper 星盘 · 小组件</string>
+    <string name="widget_name_large_visible_clock">CosmosWhisper · 4×4 · 可见天区 · 带指针</string>
+    <string name="widget_name_large_visible_no_clock">CosmosWhisper · 4×4 · 可见天区 · 无指针</string>
+    <string name="widget_name_large_active_clock">CosmosWhisper · 4×4 · 活动星图 · 带指针</string>
+    <string name="widget_name_large_active_no_clock">CosmosWhisper · 4×4 · 活动星图 · 无指针</string>
+    <string name="widget_name_small_visible_clock">CosmosWhisper · 2×2 · 可见天区 · 带指针</string>
+    <string name="widget_name_small_visible_no_clock">CosmosWhisper · 2×2 · 可见天区 · 无指针</string>
+    <string name="widget_name_small_active_clock">CosmosWhisper · 2×2 · 活动星图 · 带指针</string>
+    <string name="widget_name_small_active_no_clock">CosmosWhisper · 2×2 · 活动星图 · 无指针</string>
     <string name="widget_description">按手机当前位置在本地绘制可见天区或活动星盘。</string>
     <string name="widget_chart_description">CosmosWhisper 星盘图像</string>
     <string name="widget_clock_description">按本地时间运行的时针、分针和秒针</string>

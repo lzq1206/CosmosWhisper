@@ -23,7 +23,9 @@ class PinWidgetReceiver : BroadcastReceiver() {
         val clockHandsKey = "widget-$appWidgetId-clockHands"
         val editor = prefs.edit()
         if (!prefs.contains(kindKey)) editor.putString(kindKey, kind)
-        if (!prefs.contains(clockHandsKey)) editor.putBoolean(clockHandsKey, true)
+        if (!prefs.contains(clockHandsKey)) {
+            editor.putBoolean(clockHandsKey, intent.getBooleanExtra(EXTRA_CLOCK_HANDS, true))
+        }
         editor.apply()
         PlanisphereWidgetProvider.scheduleRefresh(context)
         PlanisphereWidgetProvider.refreshWidgets(context)
@@ -31,5 +33,6 @@ class PinWidgetReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_KIND = "com.lzq1206.cosmoswhisper.android.widgetKind"
+        const val EXTRA_CLOCK_HANDS = "com.lzq1206.cosmoswhisper.android.widgetClockHands"
     }
 }
