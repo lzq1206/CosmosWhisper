@@ -17,7 +17,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -187,12 +186,7 @@ class MainActivity : Activity() {
             setSelection(0)
         }
         content.addView(sizeSpinner)
-        val showHands = CheckBox(this).apply {
-            text = "显示时针、分针和秒针"
-            isChecked = prefs.getBoolean(KEY_DEFAULT_CLOCK_HANDS, true)
-            setTextColor(Color.rgb(240, 238, 229))
-        }
-        content.addView(showHands)
+        content.addView(text("下一步可选择是否显示时针、分针和秒针（默认开启）。", 11, Color.rgb(145, 161, 188), false))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             content.addView(text("当前 Android 版本可显示时针和分针；秒针需要 Android 12 或更新版本。", 11, Color.rgb(145, 161, 188), false))
         }
@@ -203,14 +197,12 @@ class MainActivity : Activity() {
             .setNegativeButton("取消", null)
             .setPositiveButton("继续") { _, _ ->
                 val isLarge = sizeSpinner.selectedItemPosition == 0
-                val withHands = showHands.isChecked
-                prefs.edit().putBoolean(KEY_DEFAULT_CLOCK_HANDS, withHands).apply()
-                addSelectedWidgetToHomeScreen(isLarge, withHands)
+                addSelectedWidgetToHomeScreen(isLarge)
             }
             .show()
     }
 
-    private fun addSelectedWidgetToHomeScreen(isLarge: Boolean, showHands: Boolean) {
+    private fun addSelectedWidgetToHomeScreen(isLarge: Boolean) {
         val manager = AppWidgetManager.getInstance(this)
         val providerClass = if (isLarge) PlanisphereWidgetProvider::class.java else SmallPlanisphereWidgetProvider::class.java
         val provider = ComponentName(this, providerClass)
@@ -221,7 +213,6 @@ class MainActivity : Activity() {
 
         val callbackIntent = Intent(this, PinWidgetReceiver::class.java)
             .putExtra(PinWidgetReceiver.EXTRA_KIND, currentKind)
-            .putExtra(PinWidgetReceiver.EXTRA_CLOCK_HANDS, showHands)
         val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
         val requestCode = System.nanoTime().toInt()
         val callback = PendingIntent.getBroadcast(
@@ -238,8 +229,7 @@ class MainActivity : Activity() {
         if (accepted) {
             val title = if (currentKind == "active-planisphere") "活动星盘" else "可见天区"
             val size = if (isLarge) "大组件" else "小组件"
-            val hands = if (showHands) "带指针" else "无指针"
-            toast("已选择$title · $size · $hands；请在桌面弹出的系统确认中点“添加”。")
+            toast("已选择$title · $size；请在桌面弹出的系统确认中点“添加”。")
         } else {
             toast("桌面没有接受添加请求。请长按桌面空白处，打开“小组件”并选择 CosmosWhisper。")
         }
@@ -299,7 +289,6 @@ class MainActivity : Activity() {
     companion object {
         const val PREFS_NAME = "widget-settings"
         const val KEY_DEFAULT_KIND = "defaultKind"
-        const val KEY_DEFAULT_CLOCK_HANDS = "defaultClockHands"
         const val KEY_LOCATION_LATITUDE = "phoneLatitude"
         const val KEY_LOCATION_LONGITUDE = "phoneLongitude"
         const val KEY_LOCATION_NAME = "phoneLocationName"

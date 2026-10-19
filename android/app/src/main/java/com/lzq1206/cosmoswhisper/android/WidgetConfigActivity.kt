@@ -65,8 +65,7 @@ class WidgetConfigActivity : Activity() {
         clockHandsCheckBox = CheckBox(this).apply {
             text = "显示时针、分针和秒针"
             setTextColor(Color.rgb(240, 238, 229))
-            isChecked = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
-                .getBoolean(MainActivity.KEY_DEFAULT_CLOCK_HANDS, true)
+            isChecked = true
         }
         root.addView(clockHandsCheckBox.withTop(dp(8)))
 
@@ -133,7 +132,6 @@ class WidgetConfigActivity : Activity() {
         val kind = if (typeSpinner.selectedItemPosition == 1) "active-planisphere" else "visible-sky"
         getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE).edit()
             .putString(MainActivity.KEY_DEFAULT_KIND, kind)
-            .putBoolean(MainActivity.KEY_DEFAULT_CLOCK_HANDS, clockHandsCheckBox.isChecked)
             .putString("widget-" + appWidgetId + "-kind", kind)
             .putBoolean("widget-" + appWidgetId + "-clockHands", clockHandsCheckBox.isChecked)
             .apply()
