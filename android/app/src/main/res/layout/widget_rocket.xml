@@ -1,7 +1,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
+    android:background="@drawable/rocket_widget_background"
+    android:clipToOutline="true"
     android:contentDescription="@string/widget_rocket_description">
 
     <ImageView
@@ -9,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@string/widget_rocket_description"
-        android:scaleType="fitXY" />
+        android:scaleType="centerCrop" />
 
     <TextView
         android:id="@+id/rocket_widget_status"
