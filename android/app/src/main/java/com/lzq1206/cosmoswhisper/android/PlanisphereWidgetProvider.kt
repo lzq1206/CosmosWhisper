@@ -104,6 +104,7 @@ open class PlanisphereWidgetProvider : AppWidgetProvider() {
             val showClockHands = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean("widget-$id-clockHands", true)
             views.setViewVisibility(R.id.widget_clock, if (showClockHands) View.VISIBLE else View.GONE)
+            views.setViewVisibility(R.id.widget_clock_hub, if (showClockHands) View.VISIBLE else View.GONE)
             val intent = Intent(context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             val pending = PendingIntent.getActivity(

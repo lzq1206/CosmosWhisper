@@ -12,10 +12,23 @@
         android:contentDescription="@string/widget_chart_description"
         android:scaleType="fitCenter" />
 
-    <include
-        layout="@layout/clock_overlay"
+    <AnalogClock
+        android:id="@+id/widget_clock"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:contentDescription="@string/widget_clock_description"
+        android:dial="@drawable/clock_dial_transparent"
+        android:hand_hour="@drawable/clock_hand_hour"
+        android:hand_minute="@drawable/clock_hand_minute"
+        android:hand_second="@drawable/clock_hand_second" />
+
+    <ImageView
+        android:id="@+id/widget_clock_hub"
+        android:layout_width="9dp"
+        android:layout_height="9dp"
+        android:layout_gravity="center"
+        android:contentDescription="@null"
+        android:src="@drawable/clock_hub" />
 
     <TextView
         android:id="@+id/widget_status"
