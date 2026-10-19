@@ -12,6 +12,15 @@
         android:contentDescription="@string/widget_chart_description"
         android:scaleType="fitCenter" />
 
+    <AnalogClock
+        android:id="@+id/widget_clock"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/widget_clock_description"
+        android:dial="@drawable/clock_dial_transparent"
+        android:hand_hour="@drawable/clock_hand_hour"
+        android:hand_minute="@drawable/clock_hand_minute" />
+
     <TextView
         android:id="@+id/widget_status"
         android:layout_width="match_parent"

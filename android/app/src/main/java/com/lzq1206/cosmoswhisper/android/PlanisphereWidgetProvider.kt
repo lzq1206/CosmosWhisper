@@ -10,7 +10,7 @@ import android.graphics.Bitmap
 import android.view.View
 import android.widget.RemoteViews
 
-class PlanisphereWidgetProvider : AppWidgetProvider() {
+open class PlanisphereWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
         scheduleRefresh(context)
         refreshWidgets(context)
@@ -21,6 +21,10 @@ class PlanisphereWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDisabled(context: Context) {
+        val manager = AppWidgetManager.getInstance(context)
+        val hasLargeWidgets = manager.getAppWidgetIds(ComponentName(context, PlanisphereWidgetProvider::class.java)).isNotEmpty()
+        val hasSmallWidgets = manager.getAppWidgetIds(ComponentName(context, SmallPlanisphereWidgetProvider::class.java)).isNotEmpty()
+        if (hasLargeWidgets || hasSmallWidgets) return
         try {
             context.getSystemService(android.app.job.JobScheduler::class.java)
                 .cancel(WidgetRefreshJobService.JOB_ID)
@@ -31,7 +35,10 @@ class PlanisphereWidgetProvider : AppWidgetProvider() {
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val editor = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE).edit()
-        appWidgetIds.forEach { id -> editor.remove("widget-" + id + "-kind") }
+        appWidgetIds.forEach { id ->
+            editor.remove("widget-" + id + "-kind")
+            editor.remove("widget-" + id + "-clockHands")
+        }
         editor.apply()
     }
 
@@ -78,6 +85,9 @@ class PlanisphereWidgetProvider : AppWidgetProvider() {
 
         private fun baseViews(context: Context, id: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_planisphere)
+            val showClockHands = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean("widget-$id-clockHands", true)
+            views.setViewVisibility(R.id.widget_clock, if (showClockHands) View.VISIBLE else View.GONE)
             val intent = Intent(context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             val pending = PendingIntent.getActivity(
@@ -92,3 +102,5 @@ class PlanisphereWidgetProvider : AppWidgetProvider() {
         }
     }
 }
+
+class SmallPlanisphereWidgetProvider : PlanisphereWidgetProvider()

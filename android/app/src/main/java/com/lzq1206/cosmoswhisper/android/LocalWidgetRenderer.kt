@@ -25,8 +25,12 @@ object LocalWidgetRenderer {
     fun renderAll(context: Context, onComplete: (() -> Unit)? = null) {
         mainHandler.post {
             val manager = android.appwidget.AppWidgetManager.getInstance(context)
-            val component = android.content.ComponentName(context, PlanisphereWidgetProvider::class.java)
-            val ids = manager.getAppWidgetIds(component)
+            val ids = listOf(
+                PlanisphereWidgetProvider::class.java,
+                SmallPlanisphereWidgetProvider::class.java
+            ).flatMap { provider ->
+                manager.getAppWidgetIds(android.content.ComponentName(context, provider)).toList()
+            }.distinct().toIntArray()
             if (ids.isEmpty()) {
                 onComplete?.invoke()
                 return@post

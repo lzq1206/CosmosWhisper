@@ -28,7 +28,7 @@
         </activity>
         <receiver
             android:name=".PlanisphereWidgetProvider"
-            android:label="@string/widget_name"
+            android:label="@string/widget_name_large"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -36,6 +36,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/planisphere_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".SmallPlanisphereWidgetProvider"
+            android:label="@string/widget_name_small"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/planisphere_widget_small_info" />
         </receiver>
         <receiver
             android:name=".PinWidgetReceiver"

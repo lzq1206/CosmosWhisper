@@ -1,6 +1,7 @@
 package com.lzq1206.cosmoswhisper.android
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -16,7 +17,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 
@@ -96,7 +99,7 @@ class MainActivity : Activity() {
         actions.addView(refresh, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginStart = dp(4) })
         root.addView(actions)
         locate.setOnClickListener { updateFromPhoneLocation() }
-        addWidget.setOnClickListener { addSelectedWidgetToHomeScreen() }
+        addWidget.setOnClickListener { showAddWidgetDialog() }
         refresh.setOnClickListener {
             PlanisphereWidgetProvider.refreshWidgets(this)
             toast("已用本机数据重绘桌面星盘。")
@@ -169,9 +172,48 @@ class MainActivity : Activity() {
         "按手机位置绘制 · " + String.format("%.3f, %.3f", it.first, it.second)
     } ?: "首次使用时允许定位，星图将在手机本地按当前位置绘制"
 
-    private fun addSelectedWidgetToHomeScreen() {
+    private fun showAddWidgetDialog() {
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(4), dp(22), 0)
+        }
+        content.addView(text("组件尺寸", 13, Color.rgb(201, 215, 235), true))
+        val sizeSpinner = Spinner(this).apply {
+            adapter = android.widget.ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_item,
+                listOf("大组件", "小组件")
+            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            setSelection(0)
+        }
+        content.addView(sizeSpinner)
+        val showHands = CheckBox(this).apply {
+            text = "显示时针、分针和秒针"
+            isChecked = prefs.getBoolean(KEY_DEFAULT_CLOCK_HANDS, true)
+            setTextColor(Color.rgb(240, 238, 229))
+        }
+        content.addView(showHands)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            content.addView(text("当前 Android 版本可显示时针和分针；秒针需要 Android 12 或更新版本。", 11, Color.rgb(145, 161, 188), false))
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("添加当前星盘")
+            .setView(content)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("继续") { _, _ ->
+                val isLarge = sizeSpinner.selectedItemPosition == 0
+                val withHands = showHands.isChecked
+                prefs.edit().putBoolean(KEY_DEFAULT_CLOCK_HANDS, withHands).apply()
+                addSelectedWidgetToHomeScreen(isLarge, withHands)
+            }
+            .show()
+    }
+
+    private fun addSelectedWidgetToHomeScreen(isLarge: Boolean, showHands: Boolean) {
         val manager = AppWidgetManager.getInstance(this)
-        val provider = ComponentName(this, PlanisphereWidgetProvider::class.java)
+        val providerClass = if (isLarge) PlanisphereWidgetProvider::class.java else SmallPlanisphereWidgetProvider::class.java
+        val provider = ComponentName(this, providerClass)
         if (!manager.isRequestPinAppWidgetSupported) {
             toast("当前桌面不支持应用内直接添加。请长按桌面空白处，打开“小组件”并选择 CosmosWhisper。")
             return
@@ -179,8 +221,9 @@ class MainActivity : Activity() {
 
         val callbackIntent = Intent(this, PinWidgetReceiver::class.java)
             .putExtra(PinWidgetReceiver.EXTRA_KIND, currentKind)
+            .putExtra(PinWidgetReceiver.EXTRA_CLOCK_HANDS, showHands)
         val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
-        val requestCode = if (currentKind == "active-planisphere") 7311 else 7310
+        val requestCode = System.nanoTime().toInt()
         val callback = PendingIntent.getBroadcast(
             this,
             requestCode,
@@ -194,7 +237,9 @@ class MainActivity : Activity() {
         }
         if (accepted) {
             val title = if (currentKind == "active-planisphere") "活动星盘" else "可见天区"
-            toast("已选择$title；请在桌面弹出的系统确认中点“添加”。")
+            val size = if (isLarge) "大组件" else "小组件"
+            val hands = if (showHands) "带指针" else "无指针"
+            toast("已选择$title · $size · $hands；请在桌面弹出的系统确认中点“添加”。")
         } else {
             toast("桌面没有接受添加请求。请长按桌面空白处，打开“小组件”并选择 CosmosWhisper。")
         }
@@ -254,6 +299,7 @@ class MainActivity : Activity() {
     companion object {
         const val PREFS_NAME = "widget-settings"
         const val KEY_DEFAULT_KIND = "defaultKind"
+        const val KEY_DEFAULT_CLOCK_HANDS = "defaultClockHands"
         const val KEY_LOCATION_LATITUDE = "phoneLatitude"
         const val KEY_LOCATION_LONGITUDE = "phoneLongitude"
         const val KEY_LOCATION_NAME = "phoneLocationName"

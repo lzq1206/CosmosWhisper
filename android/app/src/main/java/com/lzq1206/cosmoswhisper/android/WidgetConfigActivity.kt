@@ -10,6 +10,7 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
@@ -19,6 +20,7 @@ import java.util.Locale
 
 class WidgetConfigActivity : Activity() {
     private lateinit var typeSpinner: Spinner
+    private lateinit var clockHandsCheckBox: CheckBox
     private lateinit var locationLabel: TextView
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private var pendingAdd = false
@@ -48,6 +50,10 @@ class WidgetConfigActivity : Activity() {
         root.addView(label("设置星盘小组件", 24, Color.rgb(240, 238, 229), true))
         root.addView(label("星盘会在手机本地绘制；不从网站下载图像或天文数据。", 13, Color.rgb(157, 172, 197), false).withTop(dp(8)))
 
+        val providerName = AppWidgetManager.getInstance(this).getAppWidgetInfo(appWidgetId)?.provider?.className
+        val sizeName = if (providerName == SmallPlanisphereWidgetProvider::class.java.name) "小组件" else "大组件"
+        root.addView(label("组件尺寸：$sizeName", 13, Color.rgb(201, 215, 235), true).withTop(dp(18)))
+
         root.addView(label("星盘版本", 13, Color.rgb(201, 215, 235), true).withTop(dp(22)))
         typeSpinner = spinner(listOf("可见天区", "活动星盘"))
         root.addView(typeSpinner)
@@ -55,6 +61,14 @@ class WidgetConfigActivity : Activity() {
             if (getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
                     .getString(MainActivity.KEY_DEFAULT_KIND, "visible-sky") == "active-planisphere") 1 else 0
         )
+
+        clockHandsCheckBox = CheckBox(this).apply {
+            text = "显示时针、分针和秒针"
+            setTextColor(Color.rgb(240, 238, 229))
+            isChecked = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
+                .getBoolean(MainActivity.KEY_DEFAULT_CLOCK_HANDS, true)
+        }
+        root.addView(clockHandsCheckBox.withTop(dp(8)))
 
         locationLabel = label(locationDescription(), 12, Color.rgb(157, 172, 197), false).withTop(dp(20)) as TextView
         root.addView(locationLabel)
@@ -119,7 +133,9 @@ class WidgetConfigActivity : Activity() {
         val kind = if (typeSpinner.selectedItemPosition == 1) "active-planisphere" else "visible-sky"
         getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE).edit()
             .putString(MainActivity.KEY_DEFAULT_KIND, kind)
+            .putBoolean(MainActivity.KEY_DEFAULT_CLOCK_HANDS, clockHandsCheckBox.isChecked)
             .putString("widget-" + appWidgetId + "-kind", kind)
+            .putBoolean("widget-" + appWidgetId + "-clockHands", clockHandsCheckBox.isChecked)
             .apply()
 
         val result = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
