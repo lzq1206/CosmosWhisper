@@ -1,9 +1,0 @@
-{
-  "formatVersion": 1,
-  "appId": "com.lzq1206.cosmoswhisper.android",
-  "defaultWidget": {
-    "type": "visible-sky",
-    "locationMode": "device"
-  },
-  "refreshMinutes": 15
-}

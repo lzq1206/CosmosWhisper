@@ -1,11 +1,16 @@
 package com.lzq1206.cosmoswhisper.android
 
 import android.app.Activity
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
 import android.location.Location
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -14,7 +19,6 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import org.json.JSONObject
 
 class MainActivity : Activity() {
     private val prefs by lazy { getSharedPreferences(PREFS_NAME, MODE_PRIVATE) }
@@ -70,19 +74,29 @@ class MainActivity : Activity() {
             bottomMargin = dp(8)
         })
 
+        val batteryHint = text(
+            "建议在系统设置中将本应用的电池用量设为“不受限制”，避免桌面小组件刷新延迟。点此打开应用设置。",
+            10,
+            Color.rgb(145, 161, 188),
+            false
+        ).apply {
+            setOnClickListener { openBatterySettings() }
+        }
+        root.addView(batteryHint.withBottom(dp(5)))
+
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val locate = button("手机定位")
-        val import = button("导入配置")
+        val addWidget = button("添加到桌面")
         val refresh = button("刷新小组件")
         actions.addView(locate, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(4) })
-        actions.addView(import, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
+        actions.addView(addWidget, LinearLayout.LayoutParams(0, dp(42), 1f).apply {
             marginStart = dp(2)
             marginEnd = dp(2)
         })
         actions.addView(refresh, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginStart = dp(4) })
         root.addView(actions)
         locate.setOnClickListener { updateFromPhoneLocation() }
-        import.setOnClickListener { openConfigPicker() }
+        addWidget.setOnClickListener { addSelectedWidgetToHomeScreen() }
         refresh.setOnClickListener {
             PlanisphereWidgetProvider.refreshWidgets(this)
             toast("已用本机数据重绘桌面星盘。")
@@ -155,36 +169,42 @@ class MainActivity : Activity() {
         "按手机位置绘制 · " + String.format("%.3f, %.3f", it.first, it.second)
     } ?: "首次使用时允许定位，星图将在手机本地按当前位置绘制"
 
-    private fun openConfigPicker() {
-        val picker = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
+    private fun addSelectedWidgetToHomeScreen() {
+        val manager = AppWidgetManager.getInstance(this)
+        val provider = ComponentName(this, PlanisphereWidgetProvider::class.java)
+        if (!manager.isRequestPinAppWidgetSupported) {
+            toast("当前桌面不支持应用内直接添加。请长按桌面空白处，打开“小组件”并选择 CosmosWhisper。")
+            return
         }
-        try {
-            startActivityForResult(picker, CONFIG_REQUEST)
+
+        val callbackIntent = Intent(this, PinWidgetReceiver::class.java)
+            .putExtra(PinWidgetReceiver.EXTRA_KIND, currentKind)
+        val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+        val requestCode = if (currentKind == "active-planisphere") 7311 else 7310
+        val callback = PendingIntent.getBroadcast(
+            this,
+            requestCode,
+            callbackIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag
+        )
+        val accepted = try {
+            manager.requestPinAppWidget(provider, null, callback)
         } catch (_: Exception) {
-            toast("无法打开文件选择器。")
+            false
+        }
+        if (accepted) {
+            val title = if (currentKind == "active-planisphere") "活动星盘" else "可见天区"
+            toast("已选择$title；请在桌面弹出的系统确认中点“添加”。")
+        } else {
+            toast("桌面没有接受添加请求。请长按桌面空白处，打开“小组件”并选择 CosmosWhisper。")
         }
     }
 
-    @Deprecated("Uses the platform document picker for configuration files.")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != CONFIG_REQUEST || resultCode != RESULT_OK) return
+    private fun openBatterySettings() {
         try {
-            val contents = contentResolver.openInputStream(data?.data ?: return)?.bufferedReader()?.use { it.readText() }
-                ?: throw IllegalArgumentException("empty")
-            val config = JSONObject(contents)
-            require(config.optInt("formatVersion") == 1)
-            require(config.optString("appId") == packageName)
-            val widget = config.optJSONObject("defaultWidget") ?: throw IllegalArgumentException("widget")
-            val kind = widget.optString("type", "visible-sky")
-            require(kind == "visible-sky" || kind == "active-planisphere")
-            prefs.edit().putString(KEY_DEFAULT_KIND, kind).apply()
-            loadChart(kind)
-            toast("已导入配置；添加新小组件时会使用此星盘版本。")
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
         } catch (_: Exception) {
-            toast("配置文件无法读取，请选择 CosmosWhisper 提供的 JSON 文件。")
+            toast("请在系统设置 > 应用 > CosmosWhisper > 电池中选择“不受限制”。")
         }
     }
 
@@ -237,7 +257,6 @@ class MainActivity : Activity() {
         const val KEY_LOCATION_LATITUDE = "phoneLatitude"
         const val KEY_LOCATION_LONGITUDE = "phoneLongitude"
         const val KEY_LOCATION_NAME = "phoneLocationName"
-        private const val CONFIG_REQUEST = 6304
         private const val LOCATION_PERMISSION_REQUEST = 6305
     }
 }

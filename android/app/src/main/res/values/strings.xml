@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">CosmosWhisper 星盘</string>
+    <string name="widget_name">CosmosWhisper 星盘小组件</string>
     <string name="widget_description">按手机当前位置在本地绘制可见天区或活动星盘。</string>
     <string name="widget_chart_description">CosmosWhisper 星盘图像</string>
     <string name="widget_loading">正在载入星图…</string>

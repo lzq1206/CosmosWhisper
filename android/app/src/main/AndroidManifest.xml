@@ -28,6 +28,7 @@
         </activity>
         <receiver
             android:name=".PlanisphereWidgetProvider"
+            android:label="@string/widget_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -36,6 +37,9 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/planisphere_widget_info" />
         </receiver>
+        <receiver
+            android:name=".PinWidgetReceiver"
+            android:exported="false" />
         <service
             android:name=".WidgetRefreshJobService"
             android:exported="true"
