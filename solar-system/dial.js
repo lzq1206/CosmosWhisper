@@ -88,17 +88,64 @@ function circle(x, y, radius) {
   ctx.arc(x, y, radius, 0, Math.PI * 2);
 }
 
+// Stylized north-polar cloud structures, inspired by Juno and Cassini imagery.
+function drawPolarClouds(planet, x, y, r) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (planet.id === 'Jupiter') {
+    ctx.fillStyle = '#9fa8a8'; circle(0, 0, r); ctx.fill();
+    const vortices = [[0, 0, .24]];
+    for (let i = 0; i < 8; i++) {
+      const angle = i * Math.PI / 4;
+      vortices.push([Math.cos(angle) * .56, Math.sin(angle) * .56, .21]);
+    }
+    for (const [vx, vy, size] of vortices) {
+      const px = vx * r, py = vy * r, vr = size * r;
+      ctx.fillStyle = '#5b6b73'; circle(px, py, vr * 1.12); ctx.fill();
+      for (let arm = 0; arm < 3; arm++) {
+        ctx.beginPath();
+        for (let step = 0; step <= 24; step++) {
+          const t = step / 24;
+          const a = arm * Math.PI * 2 / 3 + t * Math.PI * 2.5;
+          const radius = vr * (.12 + .88 * t);
+          const sx = px + Math.cos(a) * radius, sy = py + Math.sin(a) * radius;
+          if (step === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        ctx.strokeStyle = arm === 0 ? '#e9d3b2' : arm === 1 ? '#c7a88d' : '#b9c6c7';
+        ctx.lineWidth = Math.max(.35, r * .045); ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = 'rgba(225,205,178,.6)'; ctx.lineWidth = r * .06;
+    circle(0, 0, r * .86); ctx.stroke();
+  } else if (planet.id === 'Saturn') {
+    ctx.fillStyle = '#d5c393'; circle(0, 0, r); ctx.fill();
+    for (const [radius, color, width] of [[.87,'#b8a579',.08],[.72,'#e1d4aa',.08],[.56,'#a69d83',.07]]) {
+      ctx.strokeStyle = color; ctx.lineWidth = r * width; circle(0, 0, r * radius); ctx.stroke();
+    }
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3 - Math.PI / 6;
+      const px = Math.cos(a) * r * .43, py = Math.sin(a) * r * .43;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fillStyle = '#a7aaa0'; ctx.fill();
+    ctx.strokeStyle = '#6d7776'; ctx.lineWidth = Math.max(.6, r * .07); ctx.stroke();
+    ctx.fillStyle = '#657479'; circle(0, 0, r * .12); ctx.fill();
+    ctx.strokeStyle = '#e6dfc1'; ctx.lineWidth = Math.max(.4, r * .035); circle(0, 0, r * .2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawPlanet(planet, x, y) {
   const r = planet.size;
   if (planet.id === 'Saturn') {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(-0.3);
-    ctx.strokeStyle = '#d6c29a';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 1.85, r * .46, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    for (const [radius, width, color] of [[1.34,.12,'#9e9078'],[1.48,.15,'#d9c99e'],[1.64,.11,'#6d675e'],[1.76,.13,'#c5b58c'],[1.88,.025,'#eee2bb']]) {
+      ctx.strokeStyle = color; ctx.lineWidth = r * width;
+      ctx.beginPath(); ctx.ellipse(0, 0, r * radius, r * radius * .89, 0, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.restore();
   }
   const shade = ctx.createRadialGradient(x - r * .2, y - r * .2, r * .05, x, y, r * 1.15);
@@ -110,13 +157,7 @@ function drawPlanet(planet, x, y) {
   ctx.save();
   circle(x, y, r);
   ctx.clip();
-  if (planet.id === 'Jupiter' || planet.id === 'Saturn') {
-    ctx.strokeStyle = planet.id === 'Jupiter' ? '#a7755d' : '#b5a27e';
-    ctx.lineWidth = r * .18;
-    for (const offset of [-.45, -.1, .25, .55]) {
-      ctx.beginPath(); ctx.moveTo(x - r, y + r * offset); ctx.lineTo(x + r, y + r * offset + r * .08); ctx.stroke();
-    }
-  }
+  if (planet.id === 'Jupiter' || planet.id === 'Saturn') drawPolarClouds(planet, x, y, r);
   if (planet.id === 'Earth') {
     ctx.fillStyle = '#72ae86';
     ctx.beginPath(); ctx.ellipse(x - r * .25, y - r * .12, r * .35, r * .19, -.5, 0, Math.PI * 2); ctx.fill();
