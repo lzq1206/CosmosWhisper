@@ -131,14 +131,6 @@ function draw() {
   const background = ctx.createRadialGradient(center, center, 30, center, center, 600);
   background.addColorStop(0, '#102440'); background.addColorStop(1, '#030817');
   ctx.fillStyle = background; ctx.fillRect(0, 0, 1200, 1200);
-  ctx.strokeStyle = '#ac9561'; ctx.lineWidth = 2; circle(center, center, 570); ctx.stroke();
-  for (let n = 0; n < 120; n++) {
-    const a = n * Math.PI / 60;
-    const inner = n % 5 === 0 ? 558 : 564;
-    ctx.strokeStyle = n % 5 === 0 ? '#b8a574' : '#52617b'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(center + Math.cos(a) * inner, center + Math.sin(a) * inner);
-    ctx.lineTo(center + Math.cos(a) * 568, center + Math.sin(a) * 568); ctx.stroke();
-  }
   const glow = ctx.createRadialGradient(center, center, 3, center, center, 80);
   glow.addColorStop(0, '#fff8c3'); glow.addColorStop(.28, '#ffbe51'); glow.addColorStop(1, 'transparent');
   ctx.fillStyle = glow; circle(center, center, 80); ctx.fill();
