@@ -54,6 +54,7 @@ jobs:
           mkdir -p widget-snapshots
           cp .widget-snapshots/manifest.json widget-snapshots/manifest.json
           cp -a .widget-snapshots/visible-sky .widget-snapshots/active-planisphere widget-snapshots/
+          if [ -d .widget-snapshots/solar-system ]; then cp -a .widget-snapshots/solar-system widget-snapshots/; fi
       - name: Remove build dependencies
         run: rm -rf node_modules
       - name: Configure Pages

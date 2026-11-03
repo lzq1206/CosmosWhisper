@@ -40,6 +40,13 @@ const routes = [
   },
 ];
 
+const solarRoute = {
+  kind: "solar-system",
+  url: (_city, timestamp) => "/solar-system/?at=" + timestamp,
+  canvas: "#dial",
+  status: "#time",
+};
+
 function slotKey(timestamp) {
   return new Date(timestamp).toISOString().slice(0, 16).replace(/[-:]/g, "") + "Z";
 }
@@ -133,6 +140,10 @@ for (let timestamp = firstSlot; timestamp <= lastSlot; timestamp += SLOT_INTERVA
 const allSnapshotPaths = [];
 const jobs = [];
 for (const slot of slots) {
+  const solarCity = { id: "beijing" };
+  const solarPath = snapshotPath(solarRoute.kind, solarCity.id, slot.key);
+  allSnapshotPaths.push(solarPath);
+  jobs.push({ city: solarCity, route: solarRoute, timestamp: slot.timestamp, key: slot.key, relativePath: solarPath });
   for (const city of WIDGET_CITIES) {
     for (const route of routes) {
       const relativePath = snapshotPath(route.kind, city.id, slot.key);

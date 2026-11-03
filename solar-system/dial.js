@@ -14,7 +14,8 @@ const planets = [
   { id: 'Uranus', name: '天王星', color: '#92d4d7', size: 12 },
   { id: 'Neptune', name: '海王星', color: '#4777d4', size: 12 },
 ];
-let chosenDate = null;
+const snapshotTime = Number(new URLSearchParams(window.location.search).get('at'));
+let chosenDate = Number.isFinite(snapshotTime) && snapshotTime > 0 ? new Date(snapshotTime) : null;
 let location = { lat: 39.9042, lon: 116.4074 };
 let ringCache = null;
 const center = 600;

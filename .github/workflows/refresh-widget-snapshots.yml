@@ -12,6 +12,7 @@ on:
       - "styles.css"
       - "widgy/city.html"
       - "widgy/watch/**"
+      - "solar-system/**"
       - "scripts/generate-widget-snapshots.mjs"
       - "scripts/publish-widget-snapshots.mjs"
       - "src/data/cities.js"

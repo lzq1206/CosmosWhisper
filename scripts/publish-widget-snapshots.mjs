@@ -56,7 +56,7 @@ async function collectManagedFiles(directory, prefix = "") {
 
 function isManagedSnapshotPath(snapshotPath) {
   return snapshotPath === "manifest.json"
-    || /^(visible-sky|active-planisphere)(-large)?\//.test(snapshotPath);
+    || /^(visible-sky|active-planisphere|solar-system)(-large)?\//.test(snapshotPath);
 }
 
 const manifest = JSON.parse(await readFile(path.join(OUTPUT_DIR, "manifest.json"), "utf8"));
@@ -66,7 +66,7 @@ if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.snapshots)) {
 
 const targetPaths = new Set();
 for (const snapshotPath of manifest.snapshots) {
-  if (!/^(visible-sky|active-planisphere)\/[a-z0-9-]+\/\d{8}T\d{4}Z\.jpg$/.test(snapshotPath)) {
+  if (!/^(visible-sky|active-planisphere|solar-system)\/[a-z0-9-]+\/\d{8}T\d{4}Z\.jpg$/.test(snapshotPath)) {
     throw new Error("Invalid snapshot path in manifest: " + snapshotPath);
   }
   if (targetPaths.has(snapshotPath)) throw new Error("Duplicate snapshot path in manifest: " + snapshotPath);
