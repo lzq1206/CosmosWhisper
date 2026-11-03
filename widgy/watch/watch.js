@@ -448,6 +448,26 @@ function drawHorizonBoundary() {
   ctx.restore();
 }
 
+function drawAstronomicalTwilightBoundary() {
+  const lst = localSiderealHours(state.date, city.lon);
+  const points = [];
+  for (let azimuth = 0; azimuth <= 360; azimuth += 1) {
+    points.push(horizontalEquatorialAt(azimuth, -18, lst));
+  }
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU);
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(155, 194, 239, .8)';
+  ctx.lineWidth = 1.1;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  // Segments outside the plotted declination range must not be joined by a chord.
+  drawPath(points, projectOfDate);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawCompassDirections() {
   ctx.save();
   ctx.textAlign = "center";
@@ -695,7 +715,7 @@ function render() {
   ctx.save(); ctx.beginPath(); ctx.arc(metrics.cx, metrics.cy, metrics.radius, 0, TAU); ctx.clip();
   drawGalaxy(); drawGrid(); drawHorizontalGrid(); drawAuxiliaryPlanes(); drawConstellations(); drawStars(); drawBodies(); drawEclipticNumbers(); drawConstellationLabels();
   ctx.restore();
-  drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawSolarTermRing(); drawPole();
+  drawAstronomicalTwilightBoundary(); drawHorizonBoundary(); drawCompassDirections(); drawTimeRing(); drawSolarTermRing(); drawPole();
   status.textContent = `${city.name} · Planisphere · 北极点旋转中心 · 恒星时 ${localSiderealHours(state.date, city.lon).toFixed(2)}h`;
 }
 
