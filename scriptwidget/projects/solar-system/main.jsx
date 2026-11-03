@@ -1,4 +1,6 @@
 // CosmosWhisper solar system dial, using quarter-hour snapshots.
+const CITY_ID = "beijing";
+const CITY_NAME = "北京";
 async function availableSnapshotURL(url) {
   try {
     const signature = await fetch(url, {
@@ -19,7 +21,7 @@ async function availableSnapshotURL(url) {
   const interval = 15 * 60 * 1000;
   const slot = Math.round(Date.now() / interval) * interval;
   const key = new Date(slot).toISOString().slice(0, 16).replace(/[-:]/g, "") + "Z";
-  const path = "solar-system/beijing/" + key + ".jpg?v=" + key;
+  const path = "solar-system/" + CITY_ID + "/" + key + ".jpg?v=" + key;
   const primary = "https://lzq1206.github.io/CosmosWhisper/widget-snapshots/" + path;
   const fallback = "https://cosmos.rainywhisper.com/widget-snapshots/" + path;
   const url = (await availableSnapshotURL(primary)) || (await availableSnapshotURL(fallback));
@@ -34,7 +36,7 @@ async function availableSnapshotURL(url) {
     $render(
       <vstack frame="max" background="#030817" alignment="center" spacing="6" padding="16">
         <icon systemName="wifi.slash" size="24" color="#f5d68c" />
-        <text font="caption" color="#9ba9bf">太阳系表盘暂不可用，请稍后刷新</text>
+        <text font="caption" color="#9ba9bf">{CITY_NAME}太阳系表盘暂不可用，请稍后刷新</text>
       </vstack>
     );
   }

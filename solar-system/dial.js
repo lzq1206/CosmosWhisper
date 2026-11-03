@@ -1,4 +1,5 @@
 import { heliocentricEcliptic, moonEcliptic, solarAltitude, planetaryBodies } from '../src/astro.js';
+import { CITY_BY_ID } from '../src/data/cities.js';
 
 const canvas = document.querySelector('#dial');
 const ctx = canvas.getContext('2d');
@@ -14,9 +15,12 @@ const planets = [
   { id: 'Uranus', name: '天王星', color: '#92d4d7', size: 12 },
   { id: 'Neptune', name: '海王星', color: '#4777d4', size: 12 },
 ];
-const snapshotTime = Number(new URLSearchParams(window.location.search).get('at'));
+const query = new URLSearchParams(window.location.search);
+const snapshotTime = Number(query.get('at'));
 let chosenDate = Number.isFinite(snapshotTime) && snapshotTime > 0 ? new Date(snapshotTime) : null;
-let location = { lat: 39.9042, lon: 116.4074 };
+const selectedCity = CITY_BY_ID.get(query.get('city')) || CITY_BY_ID.get('beijing');
+let location = { lat: selectedCity.lat, lon: selectedCity.lon };
+document.querySelector('#location-status').textContent = `时间环地点：${selectedCity.name}`;
 let ringCache = null;
 const center = 600;
 const semiMajorAxes = { Mercury:.387098, Venus:.723330, Earth:1, Mars:1.523688, Jupiter:5.20256, Saturn:9.55475, Uranus:19.18171, Neptune:30.05826 };

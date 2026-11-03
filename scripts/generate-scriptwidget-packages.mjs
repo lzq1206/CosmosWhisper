@@ -120,7 +120,7 @@ await rm(path.join(EXPORTS, "visible-sky.swt"), { force: true });
 await rm(path.join(EXPORTS, "active-planisphere.swt"), { force: true });
 
 const definitions = WIDGET_CITIES.flatMap((city) => packageTypes.map((type) => buildDefinition(type, city)));
-for (const definition of definitions) {
+for (const definition of process.env.SCRIPTWIDGET_ONLY_SOLAR === "1" ? [] : definitions) {
   const project = definition.projectFolder
     ? path.join(PROJECTS, definition.projectFolder)
     : await mkdtemp(path.join(os.tmpdir(), "cosmoswhisper-scriptwidget-"));
@@ -132,17 +132,38 @@ for (const definition of definitions) {
   }
 }
 
-await createSwtArchive(
-  { folder: "solar-system", filename: "solar-system.swt", name: "太阳系行星表盘" },
-  path.join(PROJECTS, "solar-system"),
-);
+const solarTemplate = await readFile(path.join(ROOT, "scriptwidget", "runtime", "solar-system-main.jsx"), "utf8");
+const solarManifest = JSON.parse(await readFile(path.join(PROJECTS, "solar-system", "widget.json"), "utf8"));
+for (const city of WIDGET_CITIES) {
+  const definition = { folder: "solar-system-" + city.id, filename: "solar-system-" + city.id + ".swt", name: "太阳系行星表盘 · " + city.name };
+  const project = city.id === "beijing" ? path.join(PROJECTS, "solar-system") : await mkdtemp(path.join(os.tmpdir(), "cosmoswhisper-solar-widget-"));
+  try {
+    const source = solarTemplate.replace('"__CITY_ID__"', JSON.stringify(city.id)).replace('"__CITY_NAME__"', JSON.stringify(city.name));
+    if (/__CITY_ID__|__CITY_NAME__/.test(source)) throw new Error("Missing solar widget city substitutions");
+    await mkdir(project, { recursive: true });
+    await writeFile(path.join(project, "main.jsx"), source);
+    await writeFile(path.join(project, "widget.json"), JSON.stringify({
+      ...solarManifest,
+      id: "com.lzq1206.cosmoswhisper.solar-system" + (city.id === "beijing" ? "" : "." + city.id),
+      name: "CosmosWhisper · 太阳系行星表盘 · " + city.name,
+      description: "太阳系行星表盘，时间环使用" + city.name + "。",
+    }, null, 2) + "\n");
+    await writeFile(path.join(project, "README.md"), "# 太阳系行星表盘 · " + city.name + "\n\n导入 .swt 或将本文件夹复制到 ScriptWidget 的 Scripts 目录；入口为 main.jsx。\n\n时间环使用" + city.name + "，组件读取最近 15 分钟的预生成图片，需要网络访问，不请求定位。实际刷新由 iOS 调度。\n");
+    await createSwtArchive(definition, project);
+    if (city.id === "beijing") await createSwtArchive({ folder: "solar-system", filename: "solar-system.swt", name: definition.name }, project);
+  } finally {
+    if (city.id !== "beijing") await rm(project, { recursive: true, force: true });
+  }
+}
 
 const readme = "# ScriptWidget packages\n\n"
   + "下载文件按 `visible-sky-{city}.swt`、`active-planisphere-{city}.swt` 命名。首页可请求浏览器定位并匹配最近的区域代表城市，也可以手动选择；浏览器不允许定位时默认北京。\n\n"
   + "组件不再请求定位，避免把定位延迟挤进 ScriptWidget 的 5 秒运行限制。每个下载包的城市已固定；运行时只检查 GitHub Pages 和备用站点上的图片。两次图片检查各最多等待 2 秒。\n\n"
   + "每天的快照按 15 分钟间隔滚动生成，GitHub Actions 每 3 小时检查并补齐未来 12 小时的缺图；网页版截图在页面绘制完成 5 秒后采集。优先读取 GitHub Pages，失败时回退 cosmos.rainywhisper.com。\n\n"
-  + "太阳系行星表盘使用 `solar-system.swt`，不需要选择城市，时间环采用北京。文件夹版在 `projects/solar-system`。\n\n"
+  + "太阳系行星表盘按 `solar-system-{city}.swt` 命名，时间环采用所选城市。旧版 `solar-system.swt` 继续使用北京。文件夹版在 `projects/solar-system`。\n\n"
   + "文件夹形式的北京版：`projects/visible-sky` 和 `projects/active-planisphere`。复制项目文件夹到 ScriptWidget 的 Scripts 目录即可；脚本入口是 `main.jsx`，不要直接运行 `widget.json`。\n";
 await writeFile(path.join(ROOT, "scriptwidget", "README.md"), readme);
 
-console.log("Built " + definitions.length + " city-specific ScriptWidget SWT packages; Beijing project folders are in " + PROJECTS);
+console.log("Built " + WIDGET_CITIES.length + " solar system city packages"
+  + (process.env.SCRIPTWIDGET_ONLY_SOLAR === "1" ? "" : " and " + definitions.length + " sky packages")
+  + "; Beijing project folders are in " + PROJECTS);

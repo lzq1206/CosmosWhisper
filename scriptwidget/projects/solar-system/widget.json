@@ -1,17 +1,34 @@
 {
   "formatVersion": 2,
   "id": "com.lzq1206.cosmoswhisper.solar-system",
-  "name": "CosmosWhisper · 太阳系行星表盘",
+  "name": "CosmosWhisper · 太阳系行星表盘 · 北京",
   "version": "1.0.0",
   "runtimeVersion": "1.0",
   "entry": "main.jsx",
-  "supportedFamilies": ["systemSmall", "systemMedium", "systemLarge"],
-  "permissions": ["network"],
-  "networkDomains": ["lzq1206.github.io", "cosmos.rainywhisper.com"],
+  "supportedFamilies": [
+    "systemSmall",
+    "systemMedium",
+    "systemLarge"
+  ],
+  "permissions": [
+    "network"
+  ],
+  "networkDomains": [
+    "lzq1206.github.io",
+    "cosmos.rainywhisper.com"
+  ],
   "plugins": [],
-  "description": "太阳系八大行星表盘；时间环使用北京。",
+  "description": "太阳系行星表盘，时间环使用北京。",
   "category": "Astronomy",
-  "tags": ["astronomy", "solar-system", "solar-terms", "web-snapshot"],
-  "author": { "name": "lzq1206", "url": "https://github.com/lzq1206/CosmosWhisper" },
+  "tags": [
+    "astronomy",
+    "solar-system",
+    "solar-terms",
+    "web-snapshot"
+  ],
+  "author": {
+    "name": "lzq1206",
+    "url": "https://github.com/lzq1206/CosmosWhisper"
+  },
   "license": "MIT"
 }

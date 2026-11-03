@@ -326,7 +326,8 @@ function initializeScriptWidgetDownloads() {
       const kind = link.dataset.cityPackage;
       link.href = "./scriptwidget/exports/" + kind + "-" + city.id + ".swt";
       const label = link.querySelector(".widget-download-label");
-      if (label) label.textContent = "下载" + (kind === "visible-sky" ? "可见天区版" : "活动星盘版") + " · " + city.name;
+      const names = { "visible-sky": "可见天区版", "active-planisphere": "活动星盘版", "solar-system": "太阳系行星表盘" };
+      if (label) label.textContent = "下载" + names[kind] + " · " + city.name;
     }
     try {
       localStorage.setItem("cosmos-whisper-scriptwidget-city", city.id);
