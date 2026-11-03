@@ -25,7 +25,7 @@ const LARGE_IMAGE_TOP_EXTENSION = Math.floor(LARGE_IMAGE_EXTRA_HEIGHT / 2);
 const LARGE_IMAGE_BOTTOM_EXTENSION = LARGE_IMAGE_EXTRA_HEIGHT - LARGE_IMAGE_TOP_EXTENSION;
 const DELAY_AFTER_RENDER_MS = 5000;
 // Bump when a visual change requires existing future solar snapshots to be recaptured.
-const SOLAR_DIAL_REVISION = 3;
+const SOLAR_DIAL_REVISION = 4;
 
 const routes = [
   {
@@ -108,7 +108,11 @@ async function captureJob(browser, job, index, total, errors) {
     if (pageErrors.length) throw new Error(pageErrors.join("; "));
 
     const canvas = page.locator(job.route.canvas);
-    const png = await canvas.screenshot({ type: "png", scale: "device", timeout: 15000 });
+    // A scrolled canvas can produce a white edge in Chromium element screenshots.
+    // Read the solar dial's canvas pixels directly, preserving the full square.
+    const png = job.route.kind === "solar-system"
+      ? Buffer.from((await canvas.evaluate((element) => element.toDataURL("image/png"))).split(",")[1], "base64")
+      : await canvas.screenshot({ type: "png", scale: "device", timeout: 15000 });
     const target = path.join(OUTPUT_DIR, job.route.kind, job.city.id, job.key + ".jpg");
     await mkdir(path.dirname(target), { recursive: true });
     await sharp(png)
