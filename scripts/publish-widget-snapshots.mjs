@@ -85,11 +85,18 @@ try {
   );
   let copiedCount = 0;
   for (const snapshotPath of manifest.snapshots) {
-    if (currentPaths.has(snapshotPath)) continue;
+    if (currentPaths.has(snapshotPath) && !snapshotPath.startsWith("solar-system/")) continue;
     const source = localPath(OUTPUT_DIR, snapshotPath);
     const destination = localPath(PUBLISH_DIR, snapshotPath);
+    let contents;
+    try {
+      contents = await readFile(source);
+    } catch (error) {
+      if (error.code === "ENOENT" && currentPaths.has(snapshotPath)) continue;
+      throw error;
+    }
     await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, await readFile(source));
+    await writeFile(destination, contents);
     copiedCount += 1;
   }
 

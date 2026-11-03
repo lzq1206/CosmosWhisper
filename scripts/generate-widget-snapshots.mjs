@@ -24,6 +24,8 @@ const LARGE_IMAGE_EXTRA_HEIGHT = LARGE_IMAGE_HEIGHT - IMAGE_SIZE;
 const LARGE_IMAGE_TOP_EXTENSION = Math.floor(LARGE_IMAGE_EXTRA_HEIGHT / 2);
 const LARGE_IMAGE_BOTTOM_EXTENSION = LARGE_IMAGE_EXTRA_HEIGHT - LARGE_IMAGE_TOP_EXTENSION;
 const DELAY_AFTER_RENDER_MS = 5000;
+// Bump when a visual change requires existing future solar snapshots to be recaptured.
+const SOLAR_DIAL_REVISION = 2;
 
 const routes = [
   {
@@ -68,7 +70,9 @@ async function readPreviousSnapshotPaths() {
   if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.snapshots)) {
     throw new Error("The existing snapshot manifest has an unsupported format.");
   }
-  return new Set(manifest.snapshots);
+  return new Set(manifest.snapshots.filter((snapshot) =>
+    manifest.solarDialRevision === SOLAR_DIAL_REVISION || !snapshot.startsWith("solar-system/")
+  ));
 }
 
 async function waitForServer() {
@@ -186,6 +190,7 @@ if (errors.length) {
 
 const manifest = {
   schemaVersion: 1,
+  solarDialRevision: SOLAR_DIAL_REVISION,
   generatedAt: new Date().toISOString(),
   coverage: {
     from: slots[0].key,

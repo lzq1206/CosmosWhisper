@@ -1,4 +1,4 @@
-import { heliocentricEcliptic, solarAltitude, planetaryBodies } from '../src/astro.js';
+import { heliocentricEcliptic, moonEcliptic, solarAltitude, planetaryBodies } from '../src/astro.js';
 
 const canvas = document.querySelector('#dial');
 const ctx = canvas.getContext('2d');
@@ -101,10 +101,9 @@ function drawPlanet(planet, x, y) {
     ctx.stroke();
     ctx.restore();
   }
-  const shade = ctx.createRadialGradient(x - r * .38, y - r * .42, r * .05, x, y, r * 1.15);
-  shade.addColorStop(0, '#fff6dc');
-  shade.addColorStop(.23, planet.color);
-  shade.addColorStop(1, '#142138');
+  const shade = ctx.createRadialGradient(x - r * .2, y - r * .2, r * .05, x, y, r * 1.15);
+  shade.addColorStop(0, planet.color);
+  shade.addColorStop(1, '#34405a');
   circle(x, y, r);
   ctx.fillStyle = shade;
   ctx.fill();
@@ -123,7 +122,36 @@ function drawPlanet(planet, x, y) {
     ctx.beginPath(); ctx.ellipse(x - r * .25, y - r * .12, r * .35, r * .19, -.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(x + r * .22, y + r * .25, r * .18, r * .28, .3, 0, Math.PI * 2); ctx.fill();
   }
+  // Illumination is directed toward the Sun, at the center of the dial.
+  const distance = Math.hypot(center - x, center - y) || 1;
+  const lightX = (center - x) / distance;
+  const lightY = (center - y) / distance;
+  const light = ctx.createLinearGradient(x + lightX * r, y + lightY * r, x - lightX * r, y - lightY * r);
+  light.addColorStop(0, 'rgba(255,245,210,.25)');
+  light.addColorStop(.43, 'rgba(0,0,0,.03)');
+  light.addColorStop(.58, 'rgba(2,6,16,.48)');
+  light.addColorStop(1, 'rgba(2,6,16,.88)');
+  ctx.fillStyle = light;
+  ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
   ctx.restore();
+}
+
+function drawEarthMoon(date, earthX, earthY) {
+  // The Moon's geocentric ecliptic vector sets its direction in the same
+  // north-of-the-ecliptic view as the planets. Orbit size is enlarged to show it.
+  const moon = moonEcliptic(date);
+  const angle = Math.atan2(-moon.y, moon.x);
+  const orbitRadius = 30;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(193,211,232,.55)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  circle(earthX, earthY, orbitRadius);
+  ctx.stroke();
+  ctx.restore();
+  const x = earthX + Math.cos(angle) * orbitRadius;
+  const y = earthY + Math.sin(angle) * orbitRadius;
+  drawPlanet({ id: 'Moon', color: '#d5d9de', size: 5 }, x, y);
 }
 
 function draw() {
@@ -148,6 +176,7 @@ function draw() {
     }
     ctx.closePath(); ctx.stroke();
     const { x, y } = projectedPosition(planet.id, date, radius);
+    if (planet.id === 'Earth') drawEarthMoon(date, x, y);
     drawPlanet(planet, x, y);
     ctx.font = '19px system-ui'; ctx.fillStyle = '#e1ebfa';
     ctx.textAlign = x > 1050 ? 'right' : 'left';

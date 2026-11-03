@@ -234,7 +234,7 @@ function geocentricPlanetEquatorial(body, date, earth) {
   }, date);
 }
 
-function moonEquatorial(date) {
+export function moonEcliptic(date) {
   const d = julianDate(date) - 2451543.5;
   const N = (125.1228 - 0.0529538083 * d) * DEG;
   const i = 5.1454 * DEG;
@@ -251,11 +251,15 @@ function moonEquatorial(date) {
   const v = Math.atan2(yv, xv);
   const r = Math.hypot(xv, yv);
   const longitude = v + w;
-  return eclipticVectorToEquatorial({
+  return {
     x: r * (Math.cos(N) * Math.cos(longitude) - Math.sin(N) * Math.sin(longitude) * Math.cos(i)),
     y: r * (Math.sin(N) * Math.cos(longitude) + Math.cos(N) * Math.sin(longitude) * Math.cos(i)),
     z: r * Math.sin(longitude) * Math.sin(i),
-  }, date);
+  };
+}
+
+function moonEquatorial(date) {
+  return eclipticVectorToEquatorial(moonEcliptic(date), date);
 }
 
 function angularSeparation(first, second) {
