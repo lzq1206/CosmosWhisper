@@ -18,6 +18,15 @@ let chosenDate = null;
 let location = { lat: 39.9042, lon: 116.4074 };
 let ringCache = null;
 const center = 600;
+const semiMajorAxes = { Mercury:.387098, Venus:.723330, Earth:1, Mars:1.523688, Jupiter:5.20256, Saturn:9.55475, Uranus:19.18171, Neptune:30.05826 };
+const axisRates = { Uranus:-1.55e-8, Neptune:3.313e-8 };
+function projectedPosition(id, date, radius, anomaly = null) {
+  let vector = heliocentricEcliptic(id, date, anomaly);
+  if (id === 'Earth') vector = { x:-vector.x, y:-vector.y };
+  const days = date.getTime() / 86400000 + 2440587.5 - 2451543.5;
+  const scale = radius / (semiMajorAxes[id] + (axisRates[id] || 0) * days);
+  return { x:center + vector.x * scale, y:center - vector.y * scale };
+}
 const terms = ['春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至','小寒','大寒','立春','雨水','惊蛰'];
 const ringColors = { day:'#f4f1df', standard:'#f6e2b4', civil:'#f2c36c', nautical:'#79aeea', astronomical:'#d59af4', moon:'#9bcdf7', night:'#1b335e' };
 
@@ -139,13 +148,13 @@ function draw() {
   planets.forEach((planet, index) => {
     const radius = 85 + index * 54;
     ctx.strokeStyle = 'rgba(175,194,224,.32)'; ctx.lineWidth = 1.3;
-    circle(center, center, radius); ctx.stroke();
-    let vector = heliocentricEcliptic(planet.id, date);
-    // The Earth elements in astro.js describe the Sun as seen from Earth.
-    if (planet.id === 'Earth') vector = { x: -vector.x, y: -vector.y };
-    const angle = Math.atan2(vector.y, vector.x);
-    const x = center + radius * Math.cos(angle);
-    const y = center - radius * Math.sin(angle);
+    ctx.beginPath();
+    for (let step = 0; step <= 180; step++) {
+      const point = projectedPosition(planet.id, date, radius, step * 2);
+      if (step === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y);
+    }
+    ctx.closePath(); ctx.stroke();
+    const { x, y } = projectedPosition(planet.id, date, radius);
     drawPlanet(planet, x, y);
     ctx.font = '19px system-ui'; ctx.fillStyle = '#e1ebfa';
     ctx.textAlign = x > 1050 ? 'right' : 'left';

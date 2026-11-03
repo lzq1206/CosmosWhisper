@@ -189,7 +189,7 @@ const PLANET_ORBITS = {
   Neptune: { N: [131.7806, 3.0173e-5], i: [1.7700, -2.55e-7], w: [272.8461, -6.027e-6], a: [30.05826, 3.313e-8], e: [0.008606, 2.15e-9], M: [260.2471, 0.005995147] },
 };
 
-export function heliocentricEcliptic(body, date) {
+export function heliocentricEcliptic(body, date, meanAnomalyDegrees = null) {
   const d = julianDate(date) - 2451543.5;
   const orbit = PLANET_ORBITS[body];
   const element = (name) => orbit[name][0] + orbit[name][1] * d;
@@ -198,7 +198,7 @@ export function heliocentricEcliptic(body, date) {
   const w = element("w") * DEG;
   const a = element("a");
   const e = element("e");
-  const M = mod(element("M"), 360) * DEG;
+  const M = mod(meanAnomalyDegrees ?? element("M"), 360) * DEG;
   let E = M;
   for (let iteration = 0; iteration < 8; iteration += 1) {
     E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
