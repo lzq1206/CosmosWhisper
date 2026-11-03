@@ -25,7 +25,7 @@ const LARGE_IMAGE_TOP_EXTENSION = Math.floor(LARGE_IMAGE_EXTRA_HEIGHT / 2);
 const LARGE_IMAGE_BOTTOM_EXTENSION = LARGE_IMAGE_EXTRA_HEIGHT - LARGE_IMAGE_TOP_EXTENSION;
 const DELAY_AFTER_RENDER_MS = 5000;
 // Bump when a visual change requires existing future solar snapshots to be recaptured.
-const SOLAR_DIAL_REVISION = 2;
+const SOLAR_DIAL_REVISION = 3;
 
 const routes = [
   {

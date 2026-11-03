@@ -160,6 +160,11 @@ function draw() {
   const background = ctx.createRadialGradient(center, center, 30, center, center, 600);
   background.addColorStop(0, '#102440'); background.addColorStop(1, '#030817');
   ctx.fillStyle = background; ctx.fillRect(0, 0, 1200, 1200);
+  // Use nearly the full square while keeping the outer Sun marker inside it.
+  ctx.save();
+  ctx.translate(center, center);
+  ctx.scale(1.055, 1.055);
+  ctx.translate(-center, -center);
   const glow = ctx.createRadialGradient(center, center, 3, center, center, 80);
   glow.addColorStop(0, '#fff8c3'); glow.addColorStop(.28, '#ffbe51'); glow.addColorStop(1, 'transparent');
   ctx.fillStyle = glow; circle(center, center, 80); ctx.fill();
@@ -185,6 +190,7 @@ function draw() {
   });
   const earth = heliocentricEcliptic('Earth', date);
   drawRings(date, -Math.atan2(-earth.y, -earth.x));
+  ctx.restore();
   timeLabel.textContent = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'full', timeStyle: 'short' }).format(date)
     + (chosenDate ? ' · 指定时间' : ' · 实时');
 }
